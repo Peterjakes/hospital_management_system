@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:hospital_management_system/providers/auth_provider.dart';
 import 'package:hospital_management_system/screens/auth/login_screen.dart';
 
-/// Main entry point of the Hospital Management System
 void main() async {
   // Ensure Flutter widgets are initialized
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,7 +32,7 @@ class HospitalManagementApp extends StatelessWidget {
           useMaterial3: true,
         ),
         
-        //  login screen
+        
         home: const LoginScreen(),
       ),
     );

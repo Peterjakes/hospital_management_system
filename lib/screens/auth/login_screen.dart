@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hospital_management_system/providers/auth_provider.dart';
 import 'package:hospital_management_system/screens/auth/forgot_password_screen.dart';
+import 'package:hospital_management_system/screens/auth/register_screen.dart';
 
 /// Login screen for user authentication
 class LoginScreen extends StatefulWidget {
@@ -12,12 +13,15 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  // Form key for validation
   final _formKey = GlobalKey<FormState>();
+
+  // Controllers for email & password input
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   
+  // Track password visibility
   bool _isPasswordVisible = false;
-  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -26,23 +30,21 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  /// Handle user login
+  /// Handle user login with AuthProvider
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-    setState(() => _isLoading = true);
+    
     final success = await authProvider.signIn(
       email: _emailController.text.trim(),
       password: _passwordController.text,
     );
-    setState(() => _isLoading = false);
 
     if (!mounted) return;
 
     if (success) {
-      // show success message
+      // Show success message with user’s first name
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Welcome ${authProvider.currentUserData?['firstName']}!'),
@@ -50,7 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     } else {
-      // Show error message
+      // Show error message if login fails
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.errorMessage ?? 'Login failed'),
@@ -84,8 +86,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: Colors.blue,
                   ),
                   const SizedBox(height: 32),
-
-                  // Welcome text
+                  
+                  // Welcome texts
                   const Text(
                     'Welcome Back',
                     style: TextStyle(
@@ -102,8 +104,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 32),
-
-                  // Email field
+                  
+                  // Email input field
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -116,16 +118,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Please enter your email';
                       }
-                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                          .hasMatch(value)) {
+                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
                         return 'Please enter a valid email';
                       }
                       return null;
                     },
                   ),
                   const SizedBox(height: 16),
-
-                  // Password field
+                  
+                  // Password input field
                   TextFormField(
                     controller: _passwordController,
                     obscureText: !_isPasswordVisible,
@@ -134,9 +135,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       prefixIcon: const Icon(Icons.lock),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _isPasswordVisible
-                              ? Icons.visibility_off
-                              : Icons.visibility,
+                          _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
                         ),
                         onPressed: () {
                           setState(() {
@@ -157,18 +156,18 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                   const SizedBox(height: 24),
-
+                  
                   // Login button
                   SizedBox(
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : _handleLogin,
+                      onPressed: authProvider.isLoading ? null : _handleLogin,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
                         foregroundColor: Colors.white,
                       ),
-                      child: _isLoading
+                      child: authProvider.isLoading
                           ? const CircularProgressIndicator(color: Colors.white)
                           : const Text(
                               'Sign In',
@@ -177,7 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-
+                  
                   // Forgot password link
                   TextButton(
                     onPressed: () {
@@ -188,6 +187,26 @@ class _LoginScreenState extends State<LoginScreen> {
                       );
                     },
                     child: const Text('Forgot Password?'),
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Register link
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text("Don't have an account? "),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const RegisterScreen(),
+                            ),
+                          );
+                        },
+                        child: const Text('Sign Up'),
+                      ),
+                    ],
                   ),
                 ],
               ),
