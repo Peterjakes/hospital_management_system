@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hospital_management_system/providers/auth_provider.dart';
+import 'package:hospital_management_system/screens/auth/forgot_password_screen.dart';
 
 /// Login screen for user authentication
 class LoginScreen extends StatefulWidget {
@@ -14,7 +15,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-
+  
   bool _isPasswordVisible = false;
   bool _isLoading = false;
 
@@ -25,32 +26,31 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  /// Handle user login with AuthProvider
+  /// Handle user login
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
-
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
+    setState(() => _isLoading = true);
     final success = await authProvider.signIn(
       email: _emailController.text.trim(),
       password: _passwordController.text,
     );
+    setState(() => _isLoading = false);
 
     if (!mounted) return;
 
-    setState(() => _isLoading = false);
-
     if (success) {
+      // show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-              'Welcome ${authProvider.currentUserData?['firstName'] ?? 'User'}!'),
+          content: Text('Welcome ${authProvider.currentUserData?['firstName']}!'),
           backgroundColor: Colors.green,
         ),
       );
     } else {
+      // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.errorMessage ?? 'Login failed'),
@@ -169,14 +169,25 @@ class _LoginScreenState extends State<LoginScreen> {
                         foregroundColor: Colors.white,
                       ),
                       child: _isLoading
-                          ? const CircularProgressIndicator(
-                              color: Colors.white,
-                            )
+                          ? const CircularProgressIndicator(color: Colors.white)
                           : const Text(
                               'Sign In',
                               style: TextStyle(fontSize: 16),
                             ),
                     ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Forgot password link
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const ForgotPasswordScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text('Forgot Password?'),
                   ),
                 ],
               ),
