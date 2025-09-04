@@ -69,4 +69,34 @@ class AppTheme {
     );
   }
 
+   /// Get status color based on appointment status
+  static Color getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'scheduled':
+        return scheduledColor;
+      case 'confirmed':
+        return confirmedColor;
+      case 'completed':
+        return completedColor;
+      case 'cancelled':
+        return cancelledColor;
+      default:
+        return scheduledColor;
+    }
+  }
+
+  /// Get role color based on user role
+  static Color getRoleColor(String role) {
+    switch (role.toLowerCase()) {
+      case 'doctor':
+        return doctorColor;
+      case 'patient':
+        return patientColor;
+      case 'admin':
+        return adminColor;
+      default:
+        return primaryColor;
+    }
+  }
+
 }
