@@ -16,5 +16,17 @@ class AppTheme {
   static const Color doctorColor = Color(0xFF1976D2); // Blue
   static const Color patientColor = Color(0xFF4CAF50); // Green
   static const Color adminColor = Color(0xFF9C27B0); // Purple
+
+  // Status colors for appointments
+  static const Color scheduledColor = Color(0xFF2196F3); // Blue
+  static const Color confirmedColor = Color(0xFF4CAF50); // Green
+  static const Color completedColor = Color(0xFF8BC34A); // Light Green
+  static const Color cancelledColor = Color(0xFFF44336); // Red
+  static const Color appointmentColor = Color(0xFFFF9800); // Orange
   
+  // Utility colors
+  static const Color errorColor = Color(0xFFF44336);
+  static const Color warningColor = Color(0xFFFF9800);
+  static const Color successColor = Color(0xFF4CAF50);
+
 }
