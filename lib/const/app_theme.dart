@@ -29,4 +29,44 @@ class AppTheme {
   static const Color warningColor = Color(0xFFFF9800);
   static const Color successColor = Color(0xFF4CAF50);
 
+  /// Light theme configuration
+  static ThemeData get lightTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      colorScheme: const ColorScheme.light(
+        primary: primaryColor,
+        onPrimary: Colors.white,
+        secondary: secondaryColor,
+        onSecondary: Colors.white,
+        surface: Colors.white,
+        onSurface: Colors.black,
+        background: Color(0xFFF5F5F5),
+        onBackground: Colors.black,
+        error: errorColor,
+        onError: Colors.white,
+      ),
+    );
+  }
+
+  /// Dark theme configuration
+  static ThemeData get darkTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: const ColorScheme.dark(
+        primary: primaryColorLight,
+        onPrimary: Colors.black,
+        secondary: secondaryColorLight,
+        onSecondary: Colors.black,
+        surface: Color(0xFF1E1E1E),
+        onSurface: Colors.white,
+        background: Color(0xFF121212),
+        onBackground: Colors.white,
+        error: errorColor,
+        onError: Colors.white,
+      ),
+    );
+  }
+
 }
