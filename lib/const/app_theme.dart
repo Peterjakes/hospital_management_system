@@ -11,4 +11,10 @@ class AppTheme {
   static const Color secondaryColor = Color(0xFF4CAF50); // Green
   static const Color secondaryColorDark = Color(0xFF388E3C);
   static const Color secondaryColorLight = Color(0xFFC8E6C9);
+
+  // Role-based colors for better UX
+  static const Color doctorColor = Color(0xFF1976D2); // Blue
+  static const Color patientColor = Color(0xFF4CAF50); // Green
+  static const Color adminColor = Color(0xFF9C27B0); // Purple
+  
 }
