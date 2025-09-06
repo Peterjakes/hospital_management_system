@@ -9,6 +9,11 @@ class Patient extends User {
   final String emergencyContactName;
   final String emergencyContactPhone;
   final String bloodGroup;
+  final List<String> allergies;
+  final List<String> medicalHistory;
+  final String? insuranceNumber;
+  final String? insuranceProvider;
+  final String? profileImageUrl;
 
   Patient({
     required super.id,
@@ -24,6 +29,11 @@ class Patient extends User {
     required this.emergencyContactName,
     required this.emergencyContactPhone,
     required this.bloodGroup,
+    this.allergies = const [],
+    this.medicalHistory = const [],
+    this.insuranceNumber,
+    this.insuranceProvider,
+    this.profileImageUrl,
   }) : super(role: UserRole.patient);
 
     // Calculate patient's age from date of birth
@@ -52,5 +62,9 @@ class Patient extends User {
   // Check if patient has insurance
   bool get hasInsurance =>
       insuranceNumber != null && insuranceNumber!.isNotEmpty;
+
+
+
+      
 
 }
