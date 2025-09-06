@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hospital_management_system/models/user_model.dart';
 
-// Base patient structure
+// Patient model extending the base User model
 class Patient extends User {
   final DateTime dateOfBirth;
   final String gender;
@@ -37,15 +37,17 @@ class Patient extends User {
     this.profileImageUrl,
   }) : super(role: UserRole.patient);
 
-    // Calculate patient's age from date of birth
+  // Calculate patient's age from date of birth
   int get age {
     final now = DateTime.now();
     int age = now.year - dateOfBirth.year;
-
+    
+    // Adjust if birthday hasn't occurred this year
     if (now.month < dateOfBirth.month ||
         (now.month == dateOfBirth.month && now.day < dateOfBirth.day)) {
       age--;
     }
+    
     return age;
   }
 
@@ -55,19 +57,19 @@ class Patient extends User {
   }
 
   // Check if patient has any allergies
+  // Learning: Boolean helper methods
   bool get hasAllergies => allergies.isNotEmpty;
 
   // Check if patient has medical history
   bool get hasMedicalHistory => medicalHistory.isNotEmpty;
 
   // Check if patient has insurance
-  bool get hasInsurance =>
-      insuranceNumber != null && insuranceNumber!.isNotEmpty;
+  bool get hasInsurance => insuranceNumber != null && insuranceNumber!.isNotEmpty;
 
   // Create Patient from Firestore document
   factory Patient.fromDocument(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-
+    
     return Patient(
       id: doc.id,
       email: data['email'] ?? '',
@@ -90,7 +92,7 @@ class Patient extends User {
     );
   }
 
-  // Convert Patient to Map for Firestore storage
+  //Convert Patient to Map for Firestore storage
   @override
   Map<String, dynamic> toMap() {
     final baseMap = super.toMap();
@@ -111,6 +113,45 @@ class Patient extends User {
     return baseMap;
   }
 
-      
-
+  //Create a copy of Patient with updated fields
+  //Immutable object updates
+  Patient copyWith({
+    String? firstName,
+    String? lastName,
+    String? email,
+    DateTime? dateOfBirth,
+    String? gender,
+    String? phoneNumber,
+    String? address,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+    String? bloodGroup,
+    List<String>? allergies,
+    List<String>? medicalHistory,
+    String? insuranceNumber,
+    String? insuranceProvider,
+    String? profileImageUrl,
+    bool? isActive,
+  }) {
+    return Patient(
+      id: id,
+      email: email ?? this.email,
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
+      createdAt: createdAt,
+      isActive: isActive ?? this.isActive,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      gender: gender ?? this.gender,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      address: address ?? this.address,
+      emergencyContactName: emergencyContactName ?? this.emergencyContactName,
+      emergencyContactPhone: emergencyContactPhone ?? this.emergencyContactPhone,
+      bloodGroup: bloodGroup ?? this.bloodGroup,
+      allergies: allergies ?? this.allergies,
+      medicalHistory: medicalHistory ?? this.medicalHistory,
+      insuranceNumber: insuranceNumber ?? this.insuranceNumber,
+      insuranceProvider: insuranceProvider ?? this.insuranceProvider,
+      profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+    );
+  }
 }
