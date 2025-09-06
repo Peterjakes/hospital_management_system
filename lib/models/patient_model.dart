@@ -25,4 +25,32 @@ class Patient extends User {
     required this.emergencyContactPhone,
     required this.bloodGroup,
   }) : super(role: UserRole.patient);
+
+    // Calculate patient's age from date of birth
+  int get age {
+    final now = DateTime.now();
+    int age = now.year - dateOfBirth.year;
+
+    if (now.month < dateOfBirth.month ||
+        (now.month == dateOfBirth.month && now.day < dateOfBirth.day)) {
+      age--;
+    }
+    return age;
+  }
+
+  // Get formatted date of birth
+  String get formattedDateOfBirth {
+    return '${dateOfBirth.day}/${dateOfBirth.month}/${dateOfBirth.year}';
+  }
+
+  // Check if patient has any allergies
+  bool get hasAllergies => allergies.isNotEmpty;
+
+  // Check if patient has medical history
+  bool get hasMedicalHistory => medicalHistory.isNotEmpty;
+
+  // Check if patient has insurance
+  bool get hasInsurance =>
+      insuranceNumber != null && insuranceNumber!.isNotEmpty;
+
 }
