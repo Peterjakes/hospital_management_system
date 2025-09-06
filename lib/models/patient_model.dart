@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hospital_management_system/models/user_model.dart';
 
 // Base patient structure
@@ -63,7 +64,52 @@ class Patient extends User {
   bool get hasInsurance =>
       insuranceNumber != null && insuranceNumber!.isNotEmpty;
 
+  // Create Patient from Firestore document
+  factory Patient.fromDocument(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
 
+    return Patient(
+      id: doc.id,
+      email: data['email'] ?? '',
+      firstName: data['firstName'] ?? '',
+      lastName: data['lastName'] ?? '',
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      isActive: data['isActive'] ?? true,
+      dateOfBirth: (data['dateOfBirth'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      gender: data['gender'] ?? '',
+      phoneNumber: data['phoneNumber'] ?? '',
+      address: data['address'] ?? '',
+      emergencyContactName: data['emergencyContactName'] ?? '',
+      emergencyContactPhone: data['emergencyContactPhone'] ?? '',
+      bloodGroup: data['bloodGroup'] ?? '',
+      allergies: List<String>.from(data['allergies'] ?? []),
+      medicalHistory: List<String>.from(data['medicalHistory'] ?? []),
+      insuranceNumber: data['insuranceNumber'],
+      insuranceProvider: data['insuranceProvider'],
+      profileImageUrl: data['profileImageUrl'],
+    );
+  }
+
+  // Convert Patient to Map for Firestore storage
+  @override
+  Map<String, dynamic> toMap() {
+    final baseMap = super.toMap();
+    baseMap.addAll({
+      'dateOfBirth': Timestamp.fromDate(dateOfBirth),
+      'gender': gender,
+      'phoneNumber': phoneNumber,
+      'address': address,
+      'emergencyContactName': emergencyContactName,
+      'emergencyContactPhone': emergencyContactPhone,
+      'bloodGroup': bloodGroup,
+      'allergies': allergies,
+      'medicalHistory': medicalHistory,
+      'insuranceNumber': insuranceNumber,
+      'insuranceProvider': insuranceProvider,
+      'profileImageUrl': profileImageUrl,
+    });
+    return baseMap;
+  }
 
       
 
