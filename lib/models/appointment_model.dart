@@ -64,7 +64,7 @@ extension AppointmentStatusExtension on AppointmentStatus {
   }
 }
 
-/// Appointment model for patient-doctor appointments
+// Appointment model for patient-doctor appointments
 class Appointment {
   final String id;
   final String patientId;
@@ -75,6 +75,25 @@ class Appointment {
   final AppointmentStatus status;
   final String reasonForVisit;
 
+  // Medical data
+  final String? notes;
+  final String? diagnosis;
+  final String? prescription;
+  final String? prescriptionFileUrl;
+
+  // Payment data
+  final double consultationFee;
+  final bool isPaid;
+  final String? paymentId;
+
+  // Cancellation data
+  final String? cancelReason;
+  final DateTime? cancelledAt;
+
+  // Metadata
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
   Appointment({
     required this.id,
     required this.patientId,
@@ -84,5 +103,16 @@ class Appointment {
     required this.appointmentTime,
     this.status = AppointmentStatus.scheduled,
     required this.reasonForVisit,
+    this.notes,
+    this.diagnosis,
+    this.prescription,
+    this.prescriptionFileUrl,
+    required this.consultationFee,
+    this.isPaid = false,
+    this.paymentId,
+    this.cancelReason,
+    this.cancelledAt,
+    required this.createdAt,
+    required this.updatedAt,
   });
 }
