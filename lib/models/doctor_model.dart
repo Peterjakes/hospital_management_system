@@ -1,6 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hospital_management_system/models/user_model.dart';
 
-// Doctor model with scheduling and availability
+// Doctor model with Firestore integration
 class Doctor extends User {
   final String specialization;
   final String qualification;
@@ -16,7 +17,6 @@ class Doctor extends User {
   final String? biography;
   final String? profileImageUrl;
 
-  // Scheduling fields
   final List<String> availableDays;
   final String startTime;
   final String endTime;
@@ -50,18 +50,14 @@ class Doctor extends User {
   String get formattedFee => 'KSh ${consultationFee.toStringAsFixed(0)}';
   String get formattedRating => rating.toStringAsFixed(1);
 
-  // Check if doctor is available on specific day
-  bool isAvailableOnDay(String dayOfWeek) {
-    return availableDays.contains(dayOfWeek);
-  }
+  bool isAvailableOnDay(String dayOfWeek) => availableDays.contains(dayOfWeek);
 
-  // Generate available time slots
   List<String> getAvailableTimeSlots() {
     List<String> slots = [];
     final startHour = int.parse(startTime.split(':')[0]);
     final startMinute = int.parse(startTime.split(':')[1]);
-    final endHour = int.parse(this.endTime.split(':')[0]);
-    final endMinute = int.parse(this.endTime.split(':')[1]);
+    final endHour = int.parse(endTime.split(':')[0]);
+    final endMinute = int.parse(endTime.split(':')[1]);
 
     DateTime currentSlot = DateTime(2024, 1, 1, startHour, startMinute);
     final endDateTime = DateTime(2024, 1, 1, endHour, endMinute);
@@ -72,7 +68,61 @@ class Doctor extends User {
       slots.add(timeString);
       currentSlot = currentSlot.add(Duration(minutes: consultationDuration));
     }
-
     return slots;
+  }
+
+  // Create Doctor from Firestore document
+  factory Doctor.fromDocument(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+
+    return Doctor(
+      id: doc.id,
+      email: data['email'] ?? '',
+      firstName: data['firstName'] ?? '',
+      lastName: data['lastName'] ?? '',
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      isActive: data['isActive'] ?? true,
+      specialization: data['specialization'] ?? '',
+      qualification: data['qualification'] ?? '',
+      licenseNumber: data['licenseNumber'] ?? '',
+      phoneNumber: data['phoneNumber'] ?? '',
+      departmentId: data['departmentId'] ?? '',
+      experienceYears: data['experienceYears'] ?? 0,
+      consultationFee: (data['consultationFee'] ?? 0.0).toDouble(),
+      isAvailable: data['isAvailable'] ?? true,
+      rating: (data['rating'] ?? 0.0).toDouble(),
+      totalRatings: data['totalRatings'] ?? 0,
+      biography: data['biography'],
+      profileImageUrl: data['profileImageUrl'],
+      availableDays: List<String>.from(data['availableDays'] ?? []),
+      startTime: data['startTime'] ?? '09:00',
+      endTime: data['endTime'] ?? '17:00',
+      consultationDuration: data['consultationDuration'] ?? 30,
+    );
+  }
+
+  // Convert Doctor to Map for Firestore storage
+  @override
+  Map<String, dynamic> toMap() {
+    final baseMap = super.toMap();
+    baseMap.addAll({
+      'specialization': specialization,
+      'qualification': qualification,
+      'licenseNumber': licenseNumber,
+      'phoneNumber': phoneNumber,
+      'departmentId': departmentId,
+      'experienceYears': experienceYears,
+      'consultationFee': consultationFee,
+      'isAvailable': isAvailable,
+      'rating': rating,
+      'totalRatings': totalRatings,
+      'biography': biography,
+      'profileImageUrl': profileImageUrl,
+      'availableDays': availableDays,
+      'startTime': startTime,
+      'endTime': endTime,
+      'consultationDuration': consultationDuration,
+    });
+    return baseMap;
   }
 }
