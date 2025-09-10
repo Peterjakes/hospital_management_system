@@ -1,6 +1,6 @@
 import 'package:hospital_management_system/models/user_model.dart';
 
-// Doctor model with profile fields
+// Doctor model with scheduling and availability
 class Doctor extends User {
   final String specialization;
   final String qualification;
@@ -11,11 +11,16 @@ class Doctor extends User {
   final double consultationFee;
   final bool isAvailable;
 
-  // New fields
   final double rating;
   final int totalRatings;
   final String? biography;
   final String? profileImageUrl;
+
+  // Scheduling fields
+  final List<String> availableDays;
+  final String startTime;
+  final String endTime;
+  final int consultationDuration;
 
   Doctor({
     required super.id,
@@ -36,11 +41,38 @@ class Doctor extends User {
     this.totalRatings = 0,
     this.biography,
     this.profileImageUrl,
+    this.availableDays = const [],
+    this.startTime = '09:00',
+    this.endTime = '17:00',
+    this.consultationDuration = 30,
   }) : super(role: UserRole.doctor);
 
-  // Get formatted consultation fee
   String get formattedFee => 'KSh ${consultationFee.toStringAsFixed(0)}';
-
-  // Get formatted rating display
   String get formattedRating => rating.toStringAsFixed(1);
+
+  // Check if doctor is available on specific day
+  bool isAvailableOnDay(String dayOfWeek) {
+    return availableDays.contains(dayOfWeek);
+  }
+
+  // Generate available time slots
+  List<String> getAvailableTimeSlots() {
+    List<String> slots = [];
+    final startHour = int.parse(startTime.split(':')[0]);
+    final startMinute = int.parse(startTime.split(':')[1]);
+    final endHour = int.parse(this.endTime.split(':')[0]);
+    final endMinute = int.parse(this.endTime.split(':')[1]);
+
+    DateTime currentSlot = DateTime(2024, 1, 1, startHour, startMinute);
+    final endDateTime = DateTime(2024, 1, 1, endHour, endMinute);
+
+    while (currentSlot.isBefore(endDateTime)) {
+      final timeString =
+          '${currentSlot.hour.toString().padLeft(2, '0')}:${currentSlot.minute.toString().padLeft(2, '0')}';
+      slots.add(timeString);
+      currentSlot = currentSlot.add(Duration(minutes: consultationDuration));
+    }
+
+    return slots;
+  }
 }
