@@ -45,7 +45,7 @@ extension AppointmentStatusExtension on AppointmentStatus {
         return 'No Show';
     }
   }
-
+  
   static AppointmentStatus fromString(String status) {
     switch (status.toLowerCase()) {
       case 'scheduled':
@@ -76,23 +76,15 @@ class Appointment {
   final String appointmentTime;
   final AppointmentStatus status;
   final String reasonForVisit;
-
-  // Medical data
-  final String? notes;
-  final String? diagnosis;
-  final String? prescription;
-  final String? prescriptionFileUrl;
-
-  // Payment data
+  final String? notes; // Doctor's notes
+  final String? diagnosis; // Doctor's diagnosis
+  final String? prescription; // Prescription details
+  final String? prescriptionFileUrl; // PDF file URL
   final double consultationFee;
   final bool isPaid;
   final String? paymentId;
-
-  // Cancellation data
   final String? cancelReason;
   final DateTime? cancelledAt;
-
-  // Metadata
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -117,19 +109,18 @@ class Appointment {
     required this.createdAt,
     required this.updatedAt,
   });
-}
 
-extension AppointmentLogic on Appointment {
-  // Formatted appointment date + time
+  // Get formatted appointment date and time
   String get formattedDateTime {
     final months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
+    
     return '${appointmentDate.day} ${months[appointmentDate.month - 1]} ${appointmentDate.year} at $appointmentTime';
   }
 
-  // Formatted consultation fee
+  // Get formatted consultation fee
   String get formattedFee => 'KSh ${consultationFee.toStringAsFixed(0)}';
 
   // Check if appointment is upcoming
@@ -142,16 +133,17 @@ extension AppointmentLogic on Appointment {
       int.parse(appointmentTime.split(':')[0]),
       int.parse(appointmentTime.split(':')[1]),
     );
-    return appointmentDateTime.isAfter(now) &&
-        (status == AppointmentStatus.scheduled || status == AppointmentStatus.confirmed);
+    
+    return appointmentDateTime.isAfter(now) && 
+           (status == AppointmentStatus.scheduled || status == AppointmentStatus.confirmed);
   }
 
   // Check if appointment is today
   bool get isToday {
     final now = DateTime.now();
     return appointmentDate.year == now.year &&
-        appointmentDate.month == now.month &&
-        appointmentDate.day == now.day;
+           appointmentDate.month == now.month &&
+           appointmentDate.day == now.day;
   }
 
   // Check if appointment can be cancelled
@@ -161,4 +153,99 @@ extension AppointmentLogic on Appointment {
 
   // Check if appointment has prescription
   bool get hasPrescription => prescription != null && prescription!.isNotEmpty;
+
+  // Create Appointment from Firestore document
+  factory Appointment.fromDocument(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    
+    return Appointment(
+      id: doc.id,
+      patientId: data['patientId'] ?? '',
+      doctorId: data['doctorId'] ?? '',
+      departmentId: data['departmentId'] ?? '',
+      appointmentDate: (data['appointmentDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      appointmentTime: data['appointmentTime'] ?? '',
+      status: AppointmentStatusExtension.fromString(data['status'] ?? 'scheduled'),
+      reasonForVisit: data['reasonForVisit'] ?? '',
+      notes: data['notes'],
+      diagnosis: data['diagnosis'],
+      prescription: data['prescription'],
+      prescriptionFileUrl: data['prescriptionFileUrl'],
+      consultationFee: (data['consultationFee'] ?? 0.0).toDouble(),
+      isPaid: data['isPaid'] ?? false,
+      paymentId: data['paymentId'],
+      cancelReason: data['cancelReason'],
+      cancelledAt: (data['cancelledAt'] as Timestamp?)?.toDate(),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+
+  // Convert Appointment to Map for Firestore
+  Map<String, dynamic> toMap() {
+    return {
+      'patientId': patientId,
+      'doctorId': doctorId,
+      'departmentId': departmentId,
+      'appointmentDate': Timestamp.fromDate(appointmentDate),
+      'appointmentTime': appointmentTime,
+      'status': status.value,
+      'reasonForVisit': reasonForVisit,
+      'notes': notes,
+      'diagnosis': diagnosis,
+      'prescription': prescription,
+      'prescriptionFileUrl': prescriptionFileUrl,
+      'consultationFee': consultationFee,
+      'isPaid': isPaid,
+      'paymentId': paymentId,
+      'cancelReason': cancelReason,
+      'cancelledAt': cancelledAt != null ? Timestamp.fromDate(cancelledAt!) : null,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': Timestamp.fromDate(updatedAt),
+    };
+  }
+
+  // Create a copy of Appointment with updated fields
+  Appointment copyWith({
+    String? patientId,
+    String? doctorId,
+    String? departmentId,
+    DateTime? appointmentDate,
+    String? appointmentTime,
+    AppointmentStatus? status,
+    String? reasonForVisit,
+    String? notes,
+    String? diagnosis,
+    String? prescription,
+    String? prescriptionFileUrl,
+    double? consultationFee,
+    bool? isPaid,
+    String? paymentId,
+    String? cancelReason,
+    DateTime? cancelledAt,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return Appointment(
+      id: id,
+      patientId: patientId ?? this.patientId,
+      doctorId: doctorId ?? this.doctorId,
+      departmentId: departmentId ?? this.departmentId,
+      appointmentDate: appointmentDate ?? this.appointmentDate,
+      appointmentTime: appointmentTime ?? this.appointmentTime,
+      status: status ?? this.status,
+      reasonForVisit: reasonForVisit ?? this.reasonForVisit,
+      notes: notes ?? this.notes,
+      diagnosis: diagnosis ?? this.diagnosis,
+      prescription: prescription ?? this.prescription,
+      prescriptionFileUrl: prescriptionFileUrl ?? this.prescriptionFileUrl,
+      consultationFee: consultationFee ?? this.consultationFee,
+      isPaid: isPaid ?? this.isPaid,
+      paymentId: paymentId ?? this.paymentId,
+      cancelReason: cancelReason ?? this.cancelReason,
+      cancelledAt: cancelledAt ?? this.cancelledAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }
