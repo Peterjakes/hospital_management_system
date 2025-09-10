@@ -63,3 +63,26 @@ extension AppointmentStatusExtension on AppointmentStatus {
     }
   }
 }
+
+/// Appointment model for patient-doctor appointments
+class Appointment {
+  final String id;
+  final String patientId;
+  final String doctorId;
+  final String departmentId;
+  final DateTime appointmentDate;
+  final String appointmentTime;
+  final AppointmentStatus status;
+  final String reasonForVisit;
+
+  Appointment({
+    required this.id,
+    required this.patientId,
+    required this.doctorId,
+    required this.departmentId,
+    required this.appointmentDate,
+    required this.appointmentTime,
+    this.status = AppointmentStatus.scheduled,
+    required this.reasonForVisit,
+  });
+}
