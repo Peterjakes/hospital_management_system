@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 // Appointment status enumeration
 enum AppointmentStatus {
   scheduled,
@@ -115,4 +117,48 @@ class Appointment {
     required this.createdAt,
     required this.updatedAt,
   });
+}
+
+extension AppointmentLogic on Appointment {
+  // Formatted appointment date + time
+  String get formattedDateTime {
+    final months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return '${appointmentDate.day} ${months[appointmentDate.month - 1]} ${appointmentDate.year} at $appointmentTime';
+  }
+
+  // Formatted consultation fee
+  String get formattedFee => 'KSh ${consultationFee.toStringAsFixed(0)}';
+
+  // Check if appointment is upcoming
+  bool get isUpcoming {
+    final now = DateTime.now();
+    final appointmentDateTime = DateTime(
+      appointmentDate.year,
+      appointmentDate.month,
+      appointmentDate.day,
+      int.parse(appointmentTime.split(':')[0]),
+      int.parse(appointmentTime.split(':')[1]),
+    );
+    return appointmentDateTime.isAfter(now) &&
+        (status == AppointmentStatus.scheduled || status == AppointmentStatus.confirmed);
+  }
+
+  // Check if appointment is today
+  bool get isToday {
+    final now = DateTime.now();
+    return appointmentDate.year == now.year &&
+        appointmentDate.month == now.month &&
+        appointmentDate.day == now.day;
+  }
+
+  // Check if appointment can be cancelled
+  bool get canBeCancelled {
+    return status == AppointmentStatus.scheduled || status == AppointmentStatus.confirmed;
+  }
+
+  // Check if appointment has prescription
+  bool get hasPrescription => prescription != null && prescription!.isNotEmpty;
 }
