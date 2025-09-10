@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hospital_management_system/models/user_model.dart';
 
-// Doctor model with Firestore integration
+// Doctor model with professional information and scheduling
 class Doctor extends User {
   final String specialization;
   final String qualification;
@@ -11,16 +11,14 @@ class Doctor extends User {
   final int experienceYears;
   final double consultationFee;
   final bool isAvailable;
-
   final double rating;
   final int totalRatings;
   final String? biography;
   final String? profileImageUrl;
-
-  final List<String> availableDays;
-  final String startTime;
-  final String endTime;
-  final int consultationDuration;
+  final List<String> availableDays; // ['Monday', 'Tuesday', etc.]
+  final String startTime; // '09:00'
+  final String endTime; // '17:00'
+  final int consultationDuration; // minutes
 
   Doctor({
     required super.id,
@@ -47,34 +45,45 @@ class Doctor extends User {
     this.consultationDuration = 30,
   }) : super(role: UserRole.doctor);
 
+  // Get formatted consultation fee
   String get formattedFee => 'KSh ${consultationFee.toStringAsFixed(0)}';
+
+  // Get formatted rating display
   String get formattedRating => rating.toStringAsFixed(1);
 
-  bool isAvailableOnDay(String dayOfWeek) => availableDays.contains(dayOfWeek);
+  // Check if doctor is available on specific day
+  bool isAvailableOnDay(String dayOfWeek) {
+    return availableDays.contains(dayOfWeek);
+  }
 
+  // Get available time slots for the day
   List<String> getAvailableTimeSlots() {
     List<String> slots = [];
+    
+    // Parse start and end times
     final startHour = int.parse(startTime.split(':')[0]);
     final startMinute = int.parse(startTime.split(':')[1]);
-    final endHour = int.parse(endTime.split(':')[0]);
-    final endMinute = int.parse(endTime.split(':')[1]);
-
+    final endHour = int.parse(this.endTime.split(':')[0]);
+    final endMinute = int.parse(this.endTime.split(':')[1]);
+    
+    // Create DateTime objects for calculation
     DateTime currentSlot = DateTime(2024, 1, 1, startHour, startMinute);
     final endDateTime = DateTime(2024, 1, 1, endHour, endMinute);
-
+    
+    // Generate time slots
     while (currentSlot.isBefore(endDateTime)) {
-      final timeString =
-          '${currentSlot.hour.toString().padLeft(2, '0')}:${currentSlot.minute.toString().padLeft(2, '0')}';
+      final timeString = '${currentSlot.hour.toString().padLeft(2, '0')}:${currentSlot.minute.toString().padLeft(2, '0')}';
       slots.add(timeString);
       currentSlot = currentSlot.add(Duration(minutes: consultationDuration));
     }
+    
     return slots;
   }
 
   // Create Doctor from Firestore document
   factory Doctor.fromDocument(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-
+    
     return Doctor(
       id: doc.id,
       email: data['email'] ?? '',
@@ -124,5 +133,54 @@ class Doctor extends User {
       'consultationDuration': consultationDuration,
     });
     return baseMap;
+  }
+
+  // Create a copy of Doctor with updated fields
+  Doctor copyWith({
+    String? firstName,
+    String? lastName,
+    String? email,
+    String? specialization,
+    String? qualification,
+    String? licenseNumber,
+    String? phoneNumber,
+    String? departmentId,
+    int? experienceYears,
+    double? consultationFee,
+    bool? isAvailable,
+    double? rating,
+    int? totalRatings,
+    String? biography,
+    String? profileImageUrl,
+    List<String>? availableDays,
+    String? startTime,
+    String? endTime,
+    int? consultationDuration,
+    bool? isActive,
+  }) {
+    return Doctor(
+      id: id,
+      email: email ?? this.email,
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
+      createdAt: createdAt,
+      isActive: isActive ?? this.isActive,
+      specialization: specialization ?? this.specialization,
+      qualification: qualification ?? this.qualification,
+      licenseNumber: licenseNumber ?? this.licenseNumber,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      departmentId: departmentId ?? this.departmentId,
+      experienceYears: experienceYears ?? this.experienceYears,
+      consultationFee: consultationFee ?? this.consultationFee,
+      isAvailable: isAvailable ?? this.isAvailable,
+      rating: rating ?? this.rating,
+      totalRatings: totalRatings ?? this.totalRatings,
+      biography: biography ?? this.biography,
+      profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+      availableDays: availableDays ?? this.availableDays,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      consultationDuration: consultationDuration ?? this.consultationDuration,
+    );
   }
 }
