@@ -1,6 +1,6 @@
 import 'package:hospital_management_system/models/user_model.dart';
 
-// Doctor model with basic professional information
+// Doctor model with profile fields
 class Doctor extends User {
   final String specialization;
   final String qualification;
@@ -10,6 +10,12 @@ class Doctor extends User {
   final int experienceYears;
   final double consultationFee;
   final bool isAvailable;
+
+  // New fields
+  final double rating;
+  final int totalRatings;
+  final String? biography;
+  final String? profileImageUrl;
 
   Doctor({
     required super.id,
@@ -26,5 +32,15 @@ class Doctor extends User {
     required this.experienceYears,
     required this.consultationFee,
     this.isAvailable = true,
+    this.rating = 0.0,
+    this.totalRatings = 0,
+    this.biography,
+    this.profileImageUrl,
   }) : super(role: UserRole.doctor);
+
+  // Get formatted consultation fee
+  String get formattedFee => 'KSh ${consultationFee.toStringAsFixed(0)}';
+
+  // Get formatted rating display
+  String get formattedRating => rating.toStringAsFixed(1);
 }
