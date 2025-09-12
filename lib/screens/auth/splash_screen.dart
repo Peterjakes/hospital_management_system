@@ -42,8 +42,55 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text("SplashScreen Placeholder")),
+    return Scaffold(
+      backgroundColor: Colors.blue, // temporary primary color
+      body: Center(
+        child: AnimatedBuilder(
+          animation: _animationController,
+          builder: (context, child) {
+            return FadeTransition(
+              opacity: _fadeAnimation,
+              child: ScaleTransition(
+                scale: _scaleAnimation,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(60),
+                      ),
+                      child: const Icon(
+                        Icons.local_hospital,
+                        size: 60,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    const Text(
+                      "Hospital Management",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Text(
+                      "System",
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 22,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 }
