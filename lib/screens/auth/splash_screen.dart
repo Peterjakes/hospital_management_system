@@ -41,56 +41,71 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.blue, // temporary primary color
-      body: Center(
-        child: AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: ScaleTransition(
-                scale: _scaleAnimation,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(60),
-                      ),
-                      child: const Icon(
-                        Icons.local_hospital,
-                        size: 60,
-                        color: Colors.blue,
-                      ),
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: Colors.blue, // temporary primary color
+    body: Center(
+      child: AnimatedBuilder(
+        animation: _animationController,
+        builder: (context, child) {
+          return FadeTransition(
+            opacity: _fadeAnimation,
+            child: ScaleTransition(
+              scale: _scaleAnimation,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(60),
                     ),
-                    const SizedBox(height: 40),
-                    const Text(
-                      "Hospital Management",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    child: const Icon(
+                      Icons.local_hospital,
+                      size: 60,
+                      color: Colors.blue,
                     ),
-                    const Text(
-                      "System",
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 22,
-                      ),
+                  ),
+                  const SizedBox(height: 40),
+                  const Text(
+                    "Hospital Management",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
                     ),
-                  ],
-                ),
+                  ),
+                  const Text(
+                    "System",
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 22,
+                    ),
+                  ),
+                  // Add your new code here:
+                  const SizedBox(height: 60),
+                  const CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    strokeWidth: 3,
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    "Initializing...",
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 16,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
-    );
-  }
+    ),
+  );
+}
 }
