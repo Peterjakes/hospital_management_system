@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hospital_management_system/const/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:hospital_management_system/providers/auth_provider.dart';
 import 'package:hospital_management_system/screens/auth/login_screen.dart';
@@ -51,7 +52,7 @@ class _SplashScreenState extends State<SplashScreen>
       await Future.delayed(const Duration(seconds: 3)); // splash delay
       if (!mounted) return;
       if (authProvider.isAuthenticated) {
-        
+        // Navigate to role-based dashboard 
         _navigateToLogin();
       } else {
         _navigateToLogin();
@@ -89,7 +90,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blue, // temporary primary color
+      backgroundColor: AppTheme.primaryColor,
       body: Center(
         child: AnimatedBuilder(
           animation: _animationController,
@@ -107,28 +108,34 @@ class _SplashScreenState extends State<SplashScreen>
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(60),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
                       ),
                       child: const Icon(
                         Icons.local_hospital,
                         size: 60,
-                        color: Colors.blue,
+                        color: AppTheme.primaryColor,
                       ),
                     ),
                     const SizedBox(height: 40),
-                    const Text(
+                    Text(
                       "Hospital Management",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
-                    const Text(
+                    Text(
                       "System",
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 22,
-                      ),
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w300,
+                          ),
                     ),
                     const SizedBox(height: 60),
                     const CircularProgressIndicator(
@@ -136,13 +143,11 @@ class _SplashScreenState extends State<SplashScreen>
                       strokeWidth: 3,
                     ),
                     const SizedBox(height: 20),
-                    const Text(
+                    Text(
                       "Initializing...",
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 16,
-                        letterSpacing: 0.5,
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.white70,
+                          ),
                     ),
                   ],
                 ),
