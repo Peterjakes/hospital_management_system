@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:hospital_management_system/providers/auth_provider.dart';
 import 'package:hospital_management_system/screens/auth/login_screen.dart';
 
-//Base PatientDashboard
+// Base PatientDashboard
 class PatientDashboard extends StatefulWidget {
   const PatientDashboard({super.key});
   
@@ -45,10 +45,62 @@ class _PatientDashboardState extends State<PatientDashboard> {
     );
   }
 
+  Widget _buildDashboardContent() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Card(
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Colors.teal, Colors.tealAccent],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text('Welcome back,', style: TextStyle(color: Colors.white70)),
+                  Text('Patient',
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text('Quick Overview', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: _buildStatCard('Next Appointment', 'Tomorrow', Icons.schedule, Colors.teal)),
+              const SizedBox(width: 12),
+              Expanded(child: _buildStatCard('Total Visits', '12', Icons.history, Colors.orange)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Patient Dashboard')),
+      appBar: AppBar(
+        title: const Text('Patient Dashboard'),
+        actions: [
+          IconButton(icon: const Icon(Icons.print), onPressed: _showPrintDemo),
+          IconButton(icon: const Icon(Icons.logout), onPressed: _handleLogout),
+        ],
+      ),
       body: const Center(child: Text('Patient Dashboard Placeholder')),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
