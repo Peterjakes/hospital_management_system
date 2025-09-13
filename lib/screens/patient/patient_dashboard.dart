@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:hospital_management_system/providers/auth_provider.dart';
 import 'package:hospital_management_system/screens/auth/login_screen.dart';
 
-// Base PatientDashboard
+/// Day 11: Base PatientDashboard
 class PatientDashboard extends StatefulWidget {
   const PatientDashboard({super.key});
   
@@ -91,6 +91,22 @@ class _PatientDashboardState extends State<PatientDashboard> {
     );
   }
 
+  Widget _buildBody() {
+  switch (_selectedIndex) {
+    case 0:
+      return _buildDashboardContent();
+    case 1:
+      return const Center(child: Text('Appointments - coming soon'));
+    case 2:
+      return const Center(child: Text('Medical Records - coming soon'));
+    case 3:
+      return const Center(child: Text('Profile - coming soon'));
+    default:
+      return _buildDashboardContent();
+  }
+}
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -101,7 +117,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
           IconButton(icon: const Icon(Icons.logout), onPressed: _handleLogout),
         ],
       ),
-      body: const Center(child: Text('Patient Dashboard Placeholder')),
+      body: _buildBody(), 
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (i) => setState(() => _selectedIndex = i),
