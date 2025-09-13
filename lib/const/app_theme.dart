@@ -29,6 +29,10 @@ class AppTheme {
   static const Color warningColor = Color(0xFFFF9800);
   static const Color successColor = Color(0xFF4CAF50);
 
+  // Text colors
+  static const Color textSecondary = Color(0xFF757575); // Grey for secondary text
+  static const Color textPrimary = Color(0xFF212121); // Dark grey for primary text
+
   /// Light theme configuration
   static ThemeData get lightTheme {
     return ThemeData(
