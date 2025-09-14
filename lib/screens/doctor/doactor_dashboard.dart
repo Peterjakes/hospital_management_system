@@ -43,7 +43,7 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
   Widget _buildBody() {
     switch (_selectedIndex) {
       case 0:
-        return const Center(child: Text('Dashboard Content'));
+        return _buildDashboardContent();
       case 1:
         return const Center(child: Text('Appointments'));
       case 2:
@@ -53,6 +53,61 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
       default:
         return const SizedBox();
     }
+  }
+
+  Widget _buildDashboardContent() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Card(
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.teal, Colors.teal.shade700],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Good morning,', style: TextStyle(color: Colors.white70)),
+                  Text('Dr. Smith',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20)),
+                  SizedBox(height: 8),
+                  Text('You have 5 appointments today',
+                      style: TextStyle(color: Colors.white70)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text("Today's Appointments",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          const SizedBox(height: 12),
+          _buildAppointmentCard('John Doe', '10:00 AM', 'General Checkup'),
+          _buildAppointmentCard('sam Smith', '11:30 AM', 'Follow-up'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppointmentCard(String name, String time, String reason) {
+    return Card(
+      child: ListTile(
+        leading: const CircleAvatar(child: Icon(Icons.person)),
+        title: Text(name),
+        subtitle: Text('$time - $reason'),
+      ),
+    );
   }
 
   Widget _buildBottomNavigationBar() {
