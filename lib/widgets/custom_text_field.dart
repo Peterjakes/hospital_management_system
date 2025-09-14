@@ -98,3 +98,58 @@ class CustomTextField extends StatelessWidget {
     );
   }
 }
+
+// Custom dropdown field widget with consistent styling
+//dropdown component for form selections
+class CustomDropdownField<T> extends StatelessWidget {
+  final T? value;
+  final String labelText;
+  final IconData? prefixIcon;
+  final List<DropdownMenuItem<T>> items;
+  final Function(T?)? onChanged;
+  final String? Function(T?)? validator;
+  final bool enabled;
+
+  const CustomDropdownField({
+    super.key,
+    required this.value,
+    required this.labelText,
+    this.prefixIcon,
+    required this.items,
+    this.onChanged,
+    this.validator,
+    this.enabled = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<T>(
+      value: value,
+      items: items,
+      onChanged: enabled ? onChanged : null,
+      validator: validator,
+      decoration: InputDecoration(
+        labelText: labelText,
+        prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(
+            color: AppTheme.primaryColor,
+            width: 2,
+          ),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        filled: true,
+        fillColor: enabled 
+            ? Theme.of(context).colorScheme.surface
+            : Theme.of(context).colorScheme.surface.withOpacity(0.5),
+      ),
+    );
+  }
+}
