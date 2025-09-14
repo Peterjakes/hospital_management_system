@@ -94,7 +94,7 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           const SizedBox(height: 12),
           _buildAppointmentCard('John Doe', '10:00 AM', 'General Checkup'),
-          _buildAppointmentCard('sam Smith', '11:30 AM', 'Follow-up'),
+          _buildAppointmentCard('Jane Smith', '11:30 AM', 'Follow-up'),
         ],
       ),
     );
@@ -108,6 +108,50 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
         subtitle: Text('$time - $reason'),
       ),
     );
+  }
+
+  void _showPrintPrescriptionDemo() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Print Prescription'),
+        content: const Text('Generate and print prescription for patient'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              _simulatePrintingProcess();
+            },
+            icon: const Icon(Icons.print),
+            label: const Text('Print'),
+          )
+        ],
+      ),
+    );
+  }
+
+  void _simulatePrintingProcess() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Generating prescription PDF...'),
+          ],
+        ),
+      ),
+    );
+    Future.delayed(const Duration(seconds: 2), () {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('✅ Prescription sent to printer!')),
+      );
+    });
   }
 
   Widget _buildBottomNavigationBar() {
