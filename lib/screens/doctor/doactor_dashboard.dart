@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:hospital_management_system/providers/auth_provider.dart';
+import 'package:hospital_management_system/screens/auth/login_screen.dart';
 
 class DoctorDashboard extends StatefulWidget {
   const DoctorDashboard({super.key});
@@ -10,9 +13,28 @@ class DoctorDashboard extends StatefulWidget {
 class _DoctorDashboardState extends State<DoctorDashboard> {
   int _selectedIndex = 0;
 
+  Future<void> _handleLogout() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    await authProvider.signOut();
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Doctor Dashboard'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _handleLogout,
+            tooltip: 'Logout',
+          )
+        ],
+      ),
       body: _buildBody(),
       bottomNavigationBar: _buildBottomNavigationBar(),
     );
