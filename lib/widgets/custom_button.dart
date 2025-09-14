@@ -143,3 +143,58 @@ class CustomIconButton extends StatelessWidget {
   }
 }
 
+// toggle button for switching between options
+class CustomToggleButton extends StatelessWidget {
+  final bool isSelected;
+  final String text;
+  final VoidCallback onPressed;
+  final IconData? icon;
+
+  const CustomToggleButton({
+    super.key,
+    required this.isSelected,
+    required this.text,
+    required this.onPressed,
+    this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.primaryColor : Colors.transparent,
+          border: Border.all(
+            color: AppTheme.primaryColor,
+            width: 2,
+          ),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                color: isSelected ? Colors.white : AppTheme.primaryColor,
+                size: 16,
+              ),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              text,
+              style: TextStyle(
+                color: isSelected ? Colors.white : AppTheme.primaryColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
