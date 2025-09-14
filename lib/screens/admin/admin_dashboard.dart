@@ -127,7 +127,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
         ],
       ),
-      body: const Center(child: Text('Admin dashboard body coming soon')),
+      body: _buildBody(),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (i) => setState(() => _selectedIndex = i),
@@ -136,6 +136,39 @@ class _AdminDashboardState extends State<AdminDashboard> {
           BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Users'),
           BottomNavigationBarItem(icon: Icon(Icons.business), label: 'Departments'),
           BottomNavigationBarItem(icon: Icon(Icons.assessment), label: 'Reports'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    switch (_selectedIndex) {
+      case 0:
+        return _buildDashboardContent();
+      case 1:
+        return const Center(child: Text('Users management - Coming soon!'));
+      case 2:
+        return const Center(child: Text('Departments - Coming soon!'));
+      case 3:
+        return const Center(child: Text('Reports - Coming soon!'));
+      default:
+        return const SizedBox();
+    }
+  }
+
+  Widget _buildDashboardContent() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildAdminWelcomeCard(),
+          const SizedBox(height: 20),
+          _buildSystemStats(),
+          const SizedBox(height: 20),
+          _buildQuickActions(),
+          const SizedBox(height: 20),
+          _buildRecentActivities(),
         ],
       ),
     );
