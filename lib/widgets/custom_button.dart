@@ -197,4 +197,57 @@ class CustomToggleButton extends StatelessWidget {
   }
 }
 
+// chip button for tags and categories
+class CustomChipButton extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+  final Color? selectedColor;
+
+  const CustomChipButton({
+    super.key,
+    required this.label,
+    this.isSelected = false,
+    this.onPressed,
+    this.icon,
+    this.selectedColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selectedColor ?? AppTheme.primaryColor;
+    
+    return FilterChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected ? Colors.white : color,
+            ),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : color,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+      selected: isSelected,
+      onSelected: onPressed != null ? (_) => onPressed!() : null,
+      selectedColor: color,
+      checkmarkColor: Colors.white,
+      backgroundColor: Colors.transparent,
+      side: BorderSide(color: color),
+    );
+  }
+}
+
+
 
