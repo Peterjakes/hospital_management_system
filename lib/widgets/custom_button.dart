@@ -101,3 +101,45 @@ class CustomButton extends StatelessWidget {
     );
   }
 }
+
+// custom icon button with consistent styling
+//icon button component for actions
+class CustomIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final Color? backgroundColor;
+  final Color? iconColor;
+  final double size;
+  final String? tooltip;
+
+  const CustomIconButton({
+    super.key,
+    required this.icon,
+    this.onPressed,
+    this.backgroundColor,
+    this.iconColor,
+    this.size = 48,
+    this.tooltip,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: backgroundColor ?? AppTheme.primaryColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(size / 2),
+      ),
+      child: IconButton(
+        onPressed: onPressed,
+        icon: Icon(
+          icon,
+          color: iconColor ?? AppTheme.primaryColor,
+        ),
+        tooltip: tooltip,
+      ),
+    );
+  }
+}
+
