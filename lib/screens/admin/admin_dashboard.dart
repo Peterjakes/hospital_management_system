@@ -85,13 +85,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const AlertDialog(
+      builder: (_) => AlertDialog(
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Generating system reports...'),
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+            ),
+            const SizedBox(height: 16),
+            const Text('Generating system reports...'),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              backgroundColor: Colors.blue.withOpacity(0.2),
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+            ),
           ],
         ),
       ),
@@ -99,7 +106,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
     Future.delayed(const Duration(seconds: 3), () {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('📋 System reports generated and sent to printer!')),
+        const SnackBar(
+          content: Text('✅ System reports generated and sent to printer!'),
+          backgroundColor: Colors.green,
+        ),
       );
     });
   }
