@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hospital_management_system/models/appointment_model.dart';
 import 'package:hospital_management_system/models/doctor_model.dart';
 import 'package:hospital_management_system/models/patient_model.dart';
+import 'package:hospital_management_system/models/department_model.dart';
 
 // Firestore service handling all database operations
 class FirestoreService {
@@ -13,6 +14,8 @@ class FirestoreService {
   CollectionReference get _departmentsCollection => _firestore.collection('departments');
 
   /// PATIENT OPERATIONS ///
+
+  // Get patient by ID
   Future<Patient?> getPatient(String patientId) async {
     try {
       final doc = await _usersCollection.doc(patientId).get();
@@ -25,10 +28,15 @@ class FirestoreService {
     return null;
   }
 
+  // Get all patients (Admin function)
   Future<List<Patient>> getAllPatients({int? limit}) async {
     try {
       Query query = _usersCollection.where('role', isEqualTo: 'patient');
-      if (limit != null) query = query.limit(limit);
+      
+      if (limit != null) {
+        query = query.limit(limit);
+      }
+      
       final querySnapshot = await query.get();
       return querySnapshot.docs.map((doc) => Patient.fromDocument(doc)).toList();
     } catch (e) {
@@ -36,6 +44,7 @@ class FirestoreService {
     }
   }
 
+  // Update patient information
   Future<void> updatePatient(String patientId, Map<String, dynamic> data) async {
     try {
       data['updatedAt'] = Timestamp.fromDate(DateTime.now());
@@ -46,6 +55,8 @@ class FirestoreService {
   }
 
   /// DOCTOR OPERATIONS ///
+
+  // Get doctor by ID
   Future<Doctor?> getDoctor(String doctorId) async {
     try {
       final doc = await _usersCollection.doc(doctorId).get();
@@ -58,18 +69,21 @@ class FirestoreService {
     return null;
   }
 
+  // Get all doctors
   Future<List<Doctor>> getAllDoctors() async {
     try {
       final querySnapshot = await _usersCollection
           .where('role', isEqualTo: 'doctor')
           .where('isActive', isEqualTo: true)
           .get();
+      
       return querySnapshot.docs.map((doc) => Doctor.fromDocument(doc)).toList();
     } catch (e) {
       throw Exception('Failed to get doctors: ${e.toString()}');
     }
   }
 
+  // Get doctors by department
   Future<List<Doctor>> getDoctorsByDepartment(String departmentId) async {
     try {
       final querySnapshot = await _usersCollection
@@ -77,12 +91,14 @@ class FirestoreService {
           .where('departmentId', isEqualTo: departmentId)
           .where('isActive', isEqualTo: true)
           .get();
+      
       return querySnapshot.docs.map((doc) => Doctor.fromDocument(doc)).toList();
     } catch (e) {
       throw Exception('Failed to get doctors by department: ${e.toString()}');
     }
   }
 
+  // Update doctor information
   Future<void> updateDoctor(String doctorId, Map<String, dynamic> data) async {
     try {
       data['updatedAt'] = Timestamp.fromDate(DateTime.now());
@@ -92,6 +108,7 @@ class FirestoreService {
     }
   }
 
+  // Delete doctor (Admin function)
   Future<void> deleteDoctor(String doctorId) async {
     try {
       await _usersCollection.doc(doctorId).update({
@@ -104,6 +121,8 @@ class FirestoreService {
   }
 
   /// APPOINTMENT OPERATIONS ///
+
+  // Create new appointment
   Future<String> createAppointment(Appointment appointment) async {
     try {
       final docRef = await _appointmentsCollection.add(appointment.toMap());
@@ -113,6 +132,7 @@ class FirestoreService {
     }
   }
 
+  // Get appointments for a patient
   Future<List<Appointment>> getPatientAppointments(
     String patientId, {
     AppointmentStatus? status,
@@ -122,8 +142,15 @@ class FirestoreService {
       Query query = _appointmentsCollection
           .where('patientId', isEqualTo: patientId)
           .orderBy('appointmentDate', descending: true);
-      if (status != null) query = query.where('status', isEqualTo: status.value);
-      if (limit != null) query = query.limit(limit);
+      
+      if (status != null) {
+        query = query.where('status', isEqualTo: status.value);
+      }
+      
+      if (limit != null) {
+        query = query.limit(limit);
+      }
+      
       final querySnapshot = await query.get();
       return querySnapshot.docs.map((doc) => Appointment.fromDocument(doc)).toList();
     } catch (e) {
@@ -131,26 +158,83 @@ class FirestoreService {
     }
   }
 
+  // Get appointments for a doctor
   Future<List<Appointment>> getDoctorAppointments(
     String doctorId, {
     DateTime? date,
     AppointmentStatus? status,
   }) async {
     try {
-      Query query = _appointmentsCollection.where('doctorId', isEqualTo: doctorId);
+      Query query = _appointmentsCollection
+          .where('doctorId', isEqualTo: doctorId);
+      
       if (date != null) {
-        final start = DateTime(date.year, date.month, date.day);
-        final end = DateTime(date.year, date.month, date.day, 23, 59, 59);
+        final startOfDay = DateTime(date.year, date.month, date.day);
+        final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
+        
         query = query
-            .where('appointmentDate', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
-            .where('appointmentDate', isLessThanOrEqualTo: Timestamp.fromDate(end));
+            .where('appointmentDate', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+            .where('appointmentDate', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay));
       }
-      if (status != null) query = query.where('status', isEqualTo: status.value);
+      
+      if (status != null) {
+        query = query.where('status', isEqualTo: status.value);
+      }
+      
       query = query.orderBy('appointmentDate').orderBy('appointmentTime');
-      final qs = await query.get();
-      return qs.docs.map((doc) => Appointment.fromDocument(doc)).toList();
+      
+      final querySnapshot = await query.get();
+      return querySnapshot.docs.map((doc) => Appointment.fromDocument(doc)).toList();
     } catch (e) {
       throw Exception('Failed to get doctor appointments: ${e.toString()}');
+    }
+  }
+
+  /// Update appointment
+  Future<void> updateAppointment(String appointmentId, Map<String, dynamic> data) async {
+    try {
+      data['updatedAt'] = Timestamp.fromDate(DateTime.now());
+      await _appointmentsCollection.doc(appointmentId).update(data);
+    } catch (e) {
+      throw Exception('Failed to update appointment: ${e.toString()}');
+    }
+  }
+
+  /// Cancel appointment
+  Future<void> cancelAppointment(String appointmentId, String reason) async {
+    try {
+      await _appointmentsCollection.doc(appointmentId).update({
+        'status': AppointmentStatus.cancelled.value,
+        'cancelReason': reason,
+        'cancelledAt': Timestamp.fromDate(DateTime.now()),
+        'updatedAt': Timestamp.fromDate(DateTime.now()),
+      });
+    } catch (e) {
+      throw Exception('Failed to cancel appointment: ${e.toString()}');
+    }
+  }
+
+  /// Check doctor availability
+  Future<bool> checkDoctorAvailability({
+    required String doctorId,
+    required DateTime date,
+    required String time,
+  }) async {
+    try {
+      final querySnapshot = await _appointmentsCollection
+          .where('doctorId', isEqualTo: doctorId)
+          .where('appointmentDate', isEqualTo: Timestamp.fromDate(date))
+          .where('appointmentTime', isEqualTo: time)
+          .where('status', whereIn: [
+            AppointmentStatus.scheduled.value,
+            AppointmentStatus.confirmed.value,
+            AppointmentStatus.inProgress.value,
+          ])
+          .get();
+      
+      return querySnapshot.docs.isEmpty;
+    } catch (e) {
+      throw Exception('Failed to check availability: ${e.toString()}');
     }
   }
 }
