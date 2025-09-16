@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hospital_management_system/models/appointment_model.dart';
 import 'package:hospital_management_system/models/doctor_model.dart';
 import 'package:hospital_management_system/models/patient_model.dart';
 
@@ -99,6 +100,57 @@ class FirestoreService {
       });
     } catch (e) {
       throw Exception('Failed to delete doctor: ${e.toString()}');
+    }
+  }
+
+  /// APPOINTMENT OPERATIONS ///
+  Future<String> createAppointment(Appointment appointment) async {
+    try {
+      final docRef = await _appointmentsCollection.add(appointment.toMap());
+      return docRef.id;
+    } catch (e) {
+      throw Exception('Failed to create appointment: ${e.toString()}');
+    }
+  }
+
+  Future<List<Appointment>> getPatientAppointments(
+    String patientId, {
+    AppointmentStatus? status,
+    int? limit,
+  }) async {
+    try {
+      Query query = _appointmentsCollection
+          .where('patientId', isEqualTo: patientId)
+          .orderBy('appointmentDate', descending: true);
+      if (status != null) query = query.where('status', isEqualTo: status.value);
+      if (limit != null) query = query.limit(limit);
+      final querySnapshot = await query.get();
+      return querySnapshot.docs.map((doc) => Appointment.fromDocument(doc)).toList();
+    } catch (e) {
+      throw Exception('Failed to get patient appointments: ${e.toString()}');
+    }
+  }
+
+  Future<List<Appointment>> getDoctorAppointments(
+    String doctorId, {
+    DateTime? date,
+    AppointmentStatus? status,
+  }) async {
+    try {
+      Query query = _appointmentsCollection.where('doctorId', isEqualTo: doctorId);
+      if (date != null) {
+        final start = DateTime(date.year, date.month, date.day);
+        final end = DateTime(date.year, date.month, date.day, 23, 59, 59);
+        query = query
+            .where('appointmentDate', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+            .where('appointmentDate', isLessThanOrEqualTo: Timestamp.fromDate(end));
+      }
+      if (status != null) query = query.where('status', isEqualTo: status.value);
+      query = query.orderBy('appointmentDate').orderBy('appointmentTime');
+      final qs = await query.get();
+      return qs.docs.map((doc) => Appointment.fromDocument(doc)).toList();
+    } catch (e) {
+      throw Exception('Failed to get doctor appointments: ${e.toString()}');
     }
   }
 }
