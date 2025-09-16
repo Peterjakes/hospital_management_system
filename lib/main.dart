@@ -4,16 +4,18 @@ import 'package:hospital_management_system/const/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:hospital_management_system/providers/auth_provider.dart';
 import 'package:hospital_management_system/screens/auth/splash_screen.dart';
-
+import 'firebase_options.dart';
 
 /// Main entry point of the Hospital Management System
 void main() async {
   // Ensure Flutter widgets are initialized
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Firebase
-  await Firebase.initializeApp();
-  
+
+  // Initialize Firebase with options for web and other platforms
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const HospitalManagementApp());
 }
 
@@ -28,12 +30,12 @@ class HospitalManagementApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Hospital Management System',
         debugShowCheckedModeBanner: false,
-        
+
         // Professional theme system
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.system,
-        
+
         // Start with splash screen for proper initialization
         home: const SplashScreen(),
       ),

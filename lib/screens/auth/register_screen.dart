@@ -9,8 +9,7 @@ import 'package:hospital_management_system/widgets/custom_text_field.dart';
 import 'package:hospital_management_system/widgets/custom_button.dart';
 
 
-/// Registration screen for new user accounts
-/// Day 13: Enhanced registration with custom widgets and medical data
+// Registration screen for new user accounts
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 

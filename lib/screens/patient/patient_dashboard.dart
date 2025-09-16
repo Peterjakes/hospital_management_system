@@ -281,19 +281,19 @@ class _PatientDashboardState extends State<PatientDashboard> {
   // Placeholder content for other tabs
   Widget _buildAppointmentsContent() {
     return const Center(
-      child: Text('Appointments screen - Coming in Day 13!'),
+      child: Text('Appointments screen '),
     );
   }
 
   Widget _buildRecordsContent() {
     return const Center(
-      child: Text('Medical Records screen - Coming in Day 14!'),
+      child: Text('Medical Records screen '),
     );
   }
 
   Widget _buildProfileContent() {
     return const Center(
-      child: Text('Profile screen - Coming in Day 15!'),
+      child: Text('Profile screen '),
     );
   }
 

@@ -97,36 +97,40 @@ class AuthProvider with ChangeNotifier {
 
   /// Register new user 
   Future<bool> registerUser({
-    required String email,
-    required String password,
-    required String firstName,
-    required String lastName,
-    app_user.UserRole role = app_user.UserRole.patient,
-  }) async {
-    _setLoading(true);
-    _clearError();
+  required String email,
+  required String password,
+  required String firstName,
+  required String lastName,
+  app_user.UserRole role = app_user.UserRole.patient,
+}) async {
+  _setLoading(true);
+  _clearError();
 
-    try {
-      final user = await _authService.registerUser(
-        email: email,
-        password: password,
-        firstName: firstName,
-        lastName: lastName,
-        role: role,
-      );
+  try {
+    // Register user and save data
+    final userModel = await _authService.registerUser(
+      email: email,
+      password: password,
+      firstName: firstName,
+      lastName: lastName,
+      role: role,
+    );
 
-      if (user != null) {
-        _setLoading(false);
-        return true;
-      }
-    } catch (e) {
-      _setError(e.toString());
+    if (userModel != null) {
+      _currentFirebaseUser = _authService.currentUser;
+      _currentUserData = userModel.toMap();
+      notifyListeners();
+      _setLoading(false);
+      return true;
     }
-
+  } catch (e) {
+    _setError(e.toString());
     _setLoading(false);
     return false;
   }
-
+  _setLoading(false);
+  return false;
+}
   /// Send password reset email
   Future<bool> sendPasswordResetEmail(String email) async {
     _setLoading(true);

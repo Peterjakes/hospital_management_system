@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:hospital_management_system/models/user_model.dart';
+import 'package:hospital_management_system/screens/admin/admin_dashboard.dart';
+import 'package:hospital_management_system/screens/doctor/doctor_dashboard.dart';
+import 'package:hospital_management_system/screens/patient/patient_dashboard.dart';
 import 'package:provider/provider.dart';
 import 'package:hospital_management_system/providers/auth_provider.dart';
 import 'package:hospital_management_system/screens/auth/forgot_password_screen.dart';
@@ -31,36 +35,60 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   /// Handle user login with AuthProvider
-  Future<void> _handleLogin() async {
-    if (!_formKey.currentState!.validate()) return;
+Future<void> _handleLogin() async {
+  if (!_formKey.currentState!.validate()) return;
 
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
-    final success = await authProvider.signIn(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
+  final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+  final success = await authProvider.signIn(
+    email: _emailController.text.trim(),
+    password: _passwordController.text,
+  );
+
+  if (!mounted) return;
+
+  if (success) {
+    // Show welcome message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Welcome ${authProvider.currentUserData?['firstName']}!'),
+        backgroundColor: Colors.green,
+      ),
     );
 
-    if (!mounted) return;
-
-    if (success) {
-      // Show success message with user’s first name
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Welcome ${authProvider.currentUserData?['firstName']}!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } else {
-      // Show error message if login fails
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.errorMessage ?? 'Login failed'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    // Navigate to dashboard based on role
+    switch (authProvider.currentUserRole) {
+      case UserRole.patient:
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const PatientDashboard()),
+        );
+        break;
+      case UserRole.doctor:
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const DoctorDashboard()),
+        );
+        break;
+      case UserRole.admin:
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const AdminDashboard()),
+        );
+        break;
+      default:
+        // fallback to login if role is unknown
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
     }
+  } else {
+    // Show error message if login fails
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(authProvider.errorMessage ?? 'Login failed'),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
+}
 
   @override
   Widget build(BuildContext context) {
