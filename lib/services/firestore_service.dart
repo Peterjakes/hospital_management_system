@@ -237,4 +237,30 @@ class FirestoreService {
       throw Exception('Failed to check availability: ${e.toString()}');
     }
   }
+
+
+  /// DEPARTMENT OPERATIONS ///
+   
+   // Get all departments
+   Future<List<Department>> getAllDepartments() async {
+     try {
+       final querySnapshot = await _departmentsCollection.get();
+       return querySnapshot.docs.map((doc) => Department.fromDocument(doc)).toList();
+     } catch (e) {
+       throw Exception('Failed to get departments: ${e.toString()}');
+     }
+   }
+   
+   // Get department by ID
+   Future<Department?> getDepartment(String departmentId) async {
+     try {
+       final doc = await _departmentsCollection.doc(departmentId).get();
+       if (doc.exists) {
+         return Department.fromDocument(doc);
+       }
+     } catch (e) {
+       throw Exception('Failed to get department: ${e.toString()}');
+     }
+     return null;
+   }
 }
