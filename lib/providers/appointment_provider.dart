@@ -68,7 +68,7 @@ class AppointmentProvider with ChangeNotifier {
       }
       // Create appointment object
       final appointment = Appointment(
-        id: '', // will be set by Firestore
+        id: '', // Will be set by Firestore
         patientId: patientId,
         doctorId: doctorId,
         departmentId: departmentId,
@@ -105,6 +105,37 @@ class AppointmentProvider with ChangeNotifier {
       _setError('Failed to book appointment: ${e.toString()}');
       _setLoading(false);
       return false;
+    }
+  }
+
+  /// Load patient appointments
+  Future<void> loadPatientAppointments(String patientId) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      _patientAppointments = await _firestoreService.getPatientAppointments(patientId);
+      _setLoading(false);
+      notifyListeners();
+    } catch (e) {
+      _setError('Failed to load appointments: ${e.toString()}');
+      _setLoading(false);
+    }
+  }
+
+  /// Load doctor appointments
+  Future<void> loadDoctorAppointments(String doctorId, {DateTime? date}) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      _doctorAppointments = await _firestoreService.getDoctorAppointments(
+        doctorId,
+        date: date,
+      );
+      _setLoading(false);
+      notifyListeners();
+    } catch (e) {
+      _setError('Failed to load appointments: ${e.toString()}');
+      _setLoading(false);
     }
   }
 }
