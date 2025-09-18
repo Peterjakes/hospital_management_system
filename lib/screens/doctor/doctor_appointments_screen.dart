@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:hospital_management_system/providers/appointment_provider.dart';
+import 'package:hospital_management_system/providers/auth_provider.dart';
 
-/// Doctor appointments screen showing all doctor appointments
 class DoctorAppointmentsScreen extends StatefulWidget {
   const DoctorAppointmentsScreen({super.key});
 
@@ -12,16 +14,43 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
   DateTime _selectedDate = DateTime.now();
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadAppointments());
+  }
+
+  void _loadAppointments() {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final apptProvider = Provider.of<AppointmentProvider>(context, listen: false);
+    if (auth.currentUserId != null) {
+      apptProvider.loadDoctorAppointments(auth.currentUserId!, date: _selectedDate);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _buildDateSelector(),
-        const Expanded(
-          child: Center(
-            child: Text('Appointments list will go here'),
-          ),
-        ),
-      ],
+    return Consumer<AppointmentProvider>(
+      builder: (context, apptProvider, _) {
+        if (apptProvider.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final appointments = apptProvider.doctorAppointments;
+        return Column(
+          children: [
+            _buildDateSelector(),
+            Expanded(
+              child: appointments.isEmpty
+                  ? const Center(child: Text('No appointments'))
+                  : ListView.builder(
+                      itemCount: appointments.length,
+                      itemBuilder: (_, i) => ListTile(
+                        title: Text('Appt ${appointments[i].id}'),
+                      ),
+                    ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -33,15 +62,12 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
           Expanded(
             child: Text(
               'Appointments for ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           IconButton(
             onPressed: _selectDate,
             icon: const Icon(Icons.calendar_today),
-            tooltip: 'Select Date',
           ),
         ],
       ),
@@ -55,9 +81,9 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
       firstDate: DateTime.now().subtract(const Duration(days: 30)),
       lastDate: DateTime.now().add(const Duration(days: 30)),
     );
-
     if (picked != null && picked != _selectedDate) {
       setState(() => _selectedDate = picked);
+      _loadAppointments();
     }
   }
 }
