@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:hospital_management_system/providers/auth_provider.dart';
+import 'package:hospital_management_system/providers/doctor_provider.dart';
+import 'package:provider/provider.dart';
 
 class DoctorProfileScreen extends StatefulWidget {
   const DoctorProfileScreen({super.key});
@@ -21,6 +24,18 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
   String _endTime = '17:00';
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final doctorProvider = Provider.of<DoctorProvider>(context, listen: false);
+      if (authProvider.currentUserId != null) {
+        doctorProvider.getDoctor(authProvider.currentUserId!);
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _firstNameController.dispose();
     _lastNameController.dispose();
@@ -32,8 +47,27 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('Doctor Profile Screen')),
+    return Consumer2<AuthProvider, DoctorProvider>(
+      builder: (context, authProvider, doctorProvider, child) {
+        final doctor = doctorProvider.selectedDoctor;
+        if (doctorProvider.isLoading) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        return Scaffold(
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('My Profile', style: Theme.of(context).textTheme.headlineSmall),
+                // Additional UI components will go here
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
