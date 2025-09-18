@@ -100,7 +100,7 @@ class DoctorProvider with ChangeNotifier {
     }
   }
 
-  /// Search doctors by name or specialization - ENHANCED
+  /// Search doctors by name or specialization
   /// Filters doctors based on search query
   void searchDoctors(String query) {
     _searchQuery = query;
@@ -111,19 +111,18 @@ class DoctorProvider with ChangeNotifier {
       _filteredDoctors = _doctors.where((doctor) {
         final fullName = '${doctor.firstName} ${doctor.lastName}'.toLowerCase();
         final specialization = doctor.specialization.toLowerCase();
-        final qualification = doctor.qualification.toLowerCase();
         final searchLower = query.toLowerCase();
         
         return fullName.contains(searchLower) || 
                specialization.contains(searchLower) ||
-               qualification.contains(searchLower);
+               doctor.qualification.toLowerCase().contains(searchLower);
       }).toList();
     }
     
     notifyListeners();
   }
 
-  /// Filter doctors by specialization - ENHANCED
+  /// Filter doctors by specialization
   /// Filters doctors based on selected specialization
   void filterBySpecialization(String? specialization) {
     _selectedSpecialization = specialization;
@@ -167,7 +166,7 @@ class DoctorProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Sort doctors by rating - ENHANCED
+  /// Sort doctors by rating
   /// Sorts current doctor list by rating (high to low)
   void sortByRating() {
     final doctorsToSort = _filteredDoctors.isEmpty ? _doctors : _filteredDoctors;
@@ -182,7 +181,7 @@ class DoctorProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Sort doctors by experience - ENHANCED
+  /// Sort doctors by experience
   /// Sorts current doctor list by experience years (high to low)
   void sortByExperience() {
     final doctorsToSort = _filteredDoctors.isEmpty ? _doctors : _filteredDoctors;
@@ -197,7 +196,7 @@ class DoctorProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Sort doctors by consultation fee - ENHANCED
+  /// Sort doctors by consultation fee
   /// Sorts current doctor list by fee (low to high)
   void sortByFee({bool lowToHigh = true}) {
     final doctorsToSort = _filteredDoctors.isEmpty ? _doctors : _filteredDoctors;
@@ -386,7 +385,7 @@ class DoctorProvider with ChangeNotifier {
     return _doctors.where((doctor) => doctor.experienceYears >= minYears).toList();
   }
 
-  /// Clear all filters - ENHANCED
+  /// Clear all filters
   /// Resets all filters and shows all doctors
   void clearFilters() {
     _searchQuery = '';
