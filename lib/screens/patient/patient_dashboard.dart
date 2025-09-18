@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:hospital_management_system/const/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:hospital_management_system/providers/auth_provider.dart';
+import 'package:hospital_management_system/providers/appointment_provider.dart';
 import 'package:hospital_management_system/screens/auth/login_screen.dart';
+import 'package:hospital_management_system/screens/patient/book_appointment_screen.dart';
+import 'package:hospital_management_system/screens/patient/appointments_screen.dart';
 
 // Patient dashboard screen with appointment management
 class PatientDashboard extends StatefulWidget {
@@ -14,6 +17,20 @@ class PatientDashboard extends StatefulWidget {
 
 class _PatientDashboardState extends State<PatientDashboard> {
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Load patient appointments when dashboard initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final appointmentProvider = Provider.of<AppointmentProvider>(context, listen: false);
+      
+      if (authProvider.currentUserId != null) {
+        appointmentProvider.loadPatientAppointments(authProvider.currentUserId!);
+      }
+    });
+  }
 
   // Handle logout functionality
   Future<void> _handleLogout() async {
@@ -92,7 +109,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
       case 0:
         return _buildDashboardContent();
       case 1:
-        return _buildAppointmentsContent();
+        return const AppointmentsScreen();
       case 2:
         return _buildRecordsContent();
       case 3:
@@ -104,8 +121,11 @@ class _PatientDashboardState extends State<PatientDashboard> {
 
   //Build dashboard overview content
   Widget _buildDashboardContent() {
-    return Consumer<AuthProvider>(
-      builder: (context, authProvider, child) {
+    return Consumer2<AuthProvider, AppointmentProvider>(
+      builder: (context, authProvider, appointmentProvider, child) {
+        final upcomingAppointments = appointmentProvider.upcomingAppointments;
+        final totalAppointments = appointmentProvider.patientAppointments.length;
+        
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -166,11 +186,23 @@ class _PatientDashboardState extends State<PatientDashboard> {
               Row(
                 children: [
                   Expanded(
-                    child: _buildStatCard('Next Appointment', 'Tomorrow 10:00 AM', Icons.schedule, AppTheme.primaryColor),
+                    child: _buildStatCard(
+                      'Next Appointment', 
+                      upcomingAppointments.isNotEmpty 
+                          ? upcomingAppointments.first.formattedDateTime
+                          : 'No upcoming appointments', 
+                      Icons.schedule, 
+                      AppTheme.primaryColor
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _buildStatCard('Total Visits', '12', Icons.history, AppTheme.secondaryColor),
+                    child: _buildStatCard(
+                      'Total Appointments', 
+                      totalAppointments.toString(), 
+                      Icons.history, 
+                      AppTheme.secondaryColor
+                    ),
                   ),
                 ],
               ),
@@ -194,8 +226,10 @@ class _PatientDashboardState extends State<PatientDashboard> {
                       Icons.add,
                       AppTheme.primaryColor,
                       () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Booking screen coming in Day 13!')),
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const BookAppointmentScreen(),
+                          ),
                         );
                       },
                     ),
@@ -215,10 +249,81 @@ class _PatientDashboardState extends State<PatientDashboard> {
                   ),
                 ],
               ),
+              
+              const SizedBox(height: 20),
+              
+              // Recent Appointments
+              if (appointmentProvider.patientAppointments.isNotEmpty) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Recent Appointments',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _selectedIndex = 1;
+                        });
+                      },
+                      child: const Text('View All'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ...appointmentProvider.patientAppointments
+                    .take(3)
+                    .map((appointment) => _buildAppointmentPreviewCard(appointment)),
+              ],
             ],
           ),
         );
       },
+    );
+  }
+
+  /// Build appointment preview card for dashboard
+  Widget _buildAppointmentPreviewCard(appointment) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppTheme.getStatusColor(appointment.status.value).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            Icons.calendar_today,
+            color: AppTheme.getStatusColor(appointment.status.value),
+          ),
+        ),
+        title: Text(appointment.formattedDateTime),
+        subtitle: Text(appointment.reasonForVisit),
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppTheme.getStatusColor(appointment.status.value),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            appointment.status.displayName,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        onTap: () {
+          setState(() {
+            _selectedIndex = 1;
+          });
+        },
+      ),
     );
   }
 
@@ -279,12 +384,6 @@ class _PatientDashboardState extends State<PatientDashboard> {
   }
 
   // Placeholder content for other tabs
-  Widget _buildAppointmentsContent() {
-    return const Center(
-      child: Text('Appointments screen '),
-    );
-  }
-
   Widget _buildRecordsContent() {
     return const Center(
       child: Text('Medical Records screen '),

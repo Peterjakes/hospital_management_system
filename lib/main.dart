@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:hospital_management_system/const/app_theme.dart';
+import 'package:hospital_management_system/providers/doctor_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:hospital_management_system/providers/auth_provider.dart';
+import 'package:hospital_management_system/providers/appointment_provider.dart';
 import 'package:hospital_management_system/screens/auth/splash_screen.dart';
 import 'firebase_options.dart';
 
@@ -25,8 +27,12 @@ class HospitalManagementApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AuthProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => AppointmentProvider()),
+        ChangeNotifierProvider(create: (_) => DoctorProvider()),
+      ],
       child: MaterialApp(
         title: 'Hospital Management System',
         debugShowCheckedModeBanner: false,
