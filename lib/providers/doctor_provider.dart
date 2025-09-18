@@ -401,7 +401,7 @@ class DoctorProvider with ChangeNotifier {
     // Update in main doctors list
     final doctorIndex = _doctors.indexWhere((d) => d.id == doctorId);
     if (doctorIndex != -1) {
-      // In a real implementation, you would properly update the doctor object
+      
       notifyListeners();
     }
 
