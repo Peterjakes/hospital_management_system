@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hospital_management_system/providers/appointment_provider.dart';
 import 'package:hospital_management_system/providers/auth_provider.dart';
+import 'package:hospital_management_system/models/appointment_model.dart';
+
 
 class DoctorAppointmentsScreen extends StatefulWidget {
   const DoctorAppointmentsScreen({super.key});
@@ -40,12 +42,11 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
             _buildDateSelector(),
             Expanded(
               child: appointments.isEmpty
-                  ? const Center(child: Text('No appointments'))
+                  ? _buildEmptyState()
                   : ListView.builder(
+                      padding: const EdgeInsets.all(16),
                       itemCount: appointments.length,
-                      itemBuilder: (_, i) => ListTile(
-                        title: Text('Appt ${appointments[i].id}'),
-                      ),
+                      itemBuilder: (_, i) => _buildAppointmentCard(appointments[i]),
                     ),
             ),
           ],
@@ -65,11 +66,33 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
               style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
-          IconButton(
-            onPressed: _selectDate,
-            icon: const Icon(Icons.calendar_today),
-          ),
+          IconButton(onPressed: _selectDate, icon: const Icon(Icons.calendar_today)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.calendar_today, size: 80, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          Text('No Appointments', style: Theme.of(context).textTheme.headlineSmall),
+          const SizedBox(height: 8),
+          const Text('No appointments scheduled for this date'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppointmentCard(Appointment appt) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text('Reason: ${appt.reasonForVisit}'),
       ),
     );
   }
