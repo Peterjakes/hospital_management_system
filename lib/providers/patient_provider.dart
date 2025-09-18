@@ -107,4 +107,36 @@ class PatientProvider with ChangeNotifier {
     _selectedPatient = null;
     notifyListeners();
   }
+
+  // Sort patients by name
+  void sortByName() {
+    final list = _filteredPatients.isEmpty ? _patients : _filteredPatients;
+    list.sort((a, b) => a.fullName.compareTo(b.fullName));
+    if (_filteredPatients.isNotEmpty) {
+      _filteredPatients = list;
+    } else {
+      _patients = list;
+    }
+    notifyListeners();
+  }
+
+  // Get patient statistics
+  Map<String, dynamic> getPatientStatistics() {
+    if (_patients.isEmpty) return {};
+    final total = _patients.length;
+    final male = _patients.where((p) => p.gender?.toLowerCase() == 'male').length;
+    final female = _patients.where((p) => p.gender?.toLowerCase() == 'female').length;
+    final children = _patients.where((p) => p.age < 18).length;
+    
+    return {
+      'total': total,
+      'male': male,
+      'female': female,
+      'children': children,
+      'adults': total - children,
+      'malePercentage': total > 0 ? (male / total * 100).round() : 0,
+      'femalePercentage': total > 0 ? (female / total * 100).round() : 0,
+      'childrenPercentage': total > 0 ? (children / total * 100).round() : 0,
+    };
+  }
 }
