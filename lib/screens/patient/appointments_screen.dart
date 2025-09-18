@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:hospital_management_system/const/app_theme.dart';
+import 'package:provider/provider.dart';
 import 'package:hospital_management_system/providers/appointment_provider.dart';
 import 'package:hospital_management_system/providers/auth_provider.dart';
-import 'package:hospital_management_system/screens/book_appointment_screen.dart'; // Add this import
-import 'package:provider/provider.dart';
+import 'package:hospital_management_system/models/appointment_model.dart';
+import 'package:hospital_management_system/screens/patient/book_appointment_screen.dart';
 
+/// Patient appointments screen showing all appointments
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({super.key});
 
@@ -19,7 +21,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final appointmentProvider = Provider.of<AppointmentProvider>(context, listen: false);
-
+      
       if (authProvider.currentUserId != null) {
         appointmentProvider.loadPatientAppointments(authProvider.currentUserId!);
       }
@@ -50,11 +52,24 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: appointments.length,
-              itemBuilder: (context, index) =>
-                  _buildAppointmentCard(appointments[index]),
+              itemBuilder: (context, index) {
+                return _buildAppointmentCard(appointments[index]);
+              },
             ),
           );
         },
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const BookAppointmentScreen(),
+            ),
+          );
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Book Appointment'),
+        backgroundColor: AppTheme.primaryColor,
       ),
     );
   }
@@ -64,22 +79,24 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.calendar_today, size: 80, color: Colors.grey[400]),
+          Icon(
+            Icons.calendar_today,
+            size: 80,
+            color: Colors.grey[400],
+          ),
           const SizedBox(height: 16),
           Text(
             'No Appointments Yet',
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(color: Colors.grey[600]),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: Colors.grey[600],
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             'Book your first appointment with our doctors',
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(color: Colors.grey[500]),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.grey[500],
+            ),
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
@@ -112,8 +129,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             Row(
               children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppTheme.getStatusColor(appointment.status.value),
                     borderRadius: BorderRadius.circular(12),
@@ -163,10 +179,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             const SizedBox(height: 12),
             Text(
               appointment.formattedDateTime,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
@@ -176,19 +191,21 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.attach_money, size: 16, color: AppTheme.textSecondary),
+                Icon(
+                  Icons.attach_money,
+                  size: 16,
+                  color: AppTheme.textSecondary,
+                ),
                 Text(
                   appointment.formattedFee,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(fontWeight: FontWeight.w600),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const Spacer(),
                 if (appointment.isPaid)
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: AppTheme.successColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -204,8 +221,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                   )
                 else
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: AppTheme.warningColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -227,5 +243,71 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     );
   }
 
+  void _showCancelDialog(Appointment appointment) {
+    final reasonController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Appointment'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Are you sure you want to cancel this appointment?'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(
+                labelText: 'Reason for cancellation',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Keep Appointment'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              final appointmentProvider = Provider.of<AppointmentProvider>(context, listen: false);
+              
+              final success = await appointmentProvider.cancelAppointment(
+                appointment.id,
+                reasonController.text.trim().isEmpty 
+                    ? 'Cancelled by patient' 
+                    : reasonController.text.trim(),
+              );
+              
+              if (success && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Appointment cancelled successfully'),
+                    backgroundColor: AppTheme.successColor,
+                  ),
+                );
+                _refreshAppointments();
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.errorColor,
+            ),
+            child: const Text('Cancel Appointment'),
+          ),
+        ],
+      ),
+    );
+  }
 
+  Future<void> _refreshAppointments() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final appointmentProvider = Provider.of<AppointmentProvider>(context, listen: false);
+    
+    if (authProvider.currentUserId != null) {
+      await appointmentProvider.loadPatientAppointments(authProvider.currentUserId!);
+    }
+  }
 }
