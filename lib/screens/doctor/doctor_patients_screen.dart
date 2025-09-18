@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hospital_management_system/const/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:hospital_management_system/providers/patient_provider.dart';
 
@@ -29,22 +30,21 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
   @override
   Widget build(BuildContext context) {
     return Consumer<PatientProvider>(
-      builder: (context, patientProvider, child) {
-        if (patientProvider.isLoading) {
+      builder: (context, provider, _) {
+        if (provider.isLoading) {
           return const Center(child: CircularProgressIndicator());
         }
-        final patients = patientProvider.filteredPatients;
+        final patients = provider.filteredPatients;
         return Column(
           children: [
-            _buildSearchBar(patientProvider),
+            _buildSearchBar(provider),
             Expanded(
               child: patients.isEmpty
-                  ? const Center(child: Text('No patients'))
+                  ? _buildEmptyState()
                   : ListView.builder(
+                      padding: const EdgeInsets.all(16),
                       itemCount: patients.length,
-                      itemBuilder: (context, i) => ListTile(
-                        title: Text(patients[i].fullName),
-                      ),
+                      itemBuilder: (_, i) => _buildPatientCard(patients[i]),
                     ),
             ),
           ],
@@ -64,6 +64,33 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         ),
         onChanged: provider.searchPatients,
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.people_outline, size: 80, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          const Text('No Patients Found'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPatientCard(patient) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: AppTheme.patientColor,
+          child: Text(patient.firstName[0]),
+        ),
+        title: Text(patient.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text('Age: ${patient.age} • ${patient.gender}'),
       ),
     );
   }
