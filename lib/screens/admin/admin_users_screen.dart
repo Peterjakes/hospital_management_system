@@ -52,8 +52,8 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
           child: TabBarView(
             controller: _tabController,
             children: [
-              Container(), // patients tab placeholder
-              Container(), // doctors tab placeholder
+              _buildPatientsTab(),
+              _buildDoctorsTab(),
             ],
           ),
         ),
@@ -91,6 +91,83 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildPatientsTab() {
+    return Consumer<PatientProvider>(
+      builder: (context, patientProvider, child) {
+        if (patientProvider.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final patients = patientProvider.filteredPatients;
+        if (patients.isEmpty) {
+          return _buildEmptyState('No patients found');
+        }
+        return RefreshIndicator(
+          onRefresh: () => patientProvider.refreshPatients(),
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: patients.length,
+            itemBuilder: (context, index) =>
+                _buildPatientCard(patients[index], patientProvider),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDoctorsTab() {
+    return Consumer<DoctorProvider>(
+      builder: (context, doctorProvider, child) {
+        if (doctorProvider.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final doctors = doctorProvider.filteredDoctors;
+        if (doctors.isEmpty) {
+          return _buildEmptyState('No doctors found');
+        }
+        return RefreshIndicator(
+          onRefresh: () => doctorProvider.refreshDoctors(),
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: doctors.length,
+            itemBuilder: (context, index) =>
+                _buildDoctorCard(doctors[index], doctorProvider),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyState(String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.people_outline, size: 80, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          Text(message,
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(color: Colors.grey[600])),
+        ],
+      ),
+    );
+  }
+
+  
+  Widget _buildPatientCard(patient, PatientProvider patientProvider) {
+    return Container(
+      child: Text('Patient card implementation needed'),
+    );
+  }
+
+  
+  Widget _buildDoctorCard(doctor, DoctorProvider doctorProvider) {
+    return Container(
+      child: Text('Doctor card implementation needed'),
     );
   }
 }
