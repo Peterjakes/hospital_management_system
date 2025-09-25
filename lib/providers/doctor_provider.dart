@@ -86,7 +86,16 @@ class DoctorProvider with ChangeNotifier {
 
   /// Get doctor by ID
   /// Fetches specific doctor and sets as selected
-  Future<void> getDoctor(String doctorId) async {
+  /// Enhanced to handle prescription workflow
+  Future<Doctor?> getDoctor(String doctorId) async {
+    // First check if doctor is already in local state
+    final localDoctor = _doctors.where((d) => d.id == doctorId).firstOrNull;
+    if (localDoctor != null) {
+      _selectedDoctor = localDoctor;
+      notifyListeners();
+      return localDoctor;
+    }
+
     _setLoading(true);
     _clearError();
 
@@ -94,10 +103,33 @@ class DoctorProvider with ChangeNotifier {
       _selectedDoctor = await _firestoreService.getDoctor(doctorId);
       _setLoading(false);
       notifyListeners();
+      return _selectedDoctor;
     } catch (e) {
       _setError('Failed to load doctor: ${e.toString()}');
       _setLoading(false);
+      return null;
     }
+  }
+
+  /// Get doctor by ID synchronously from loaded data
+  /// Returns doctor from current state without API call
+  Doctor? getDoctorFromState(String doctorId) {
+    return _doctors.where((d) => d.id == doctorId).firstOrNull ?? _selectedDoctor;
+  }
+
+  /// Ensure doctor data is available for prescription generation
+  /// Loads doctor if not already available
+  Future<Doctor?> ensureDoctorData(String doctorId) async {
+    Doctor? doctor = getDoctorFromState(doctorId);
+    
+    if (doctor == null) {
+      doctor = await getDoctor(doctorId);
+    } else {
+      _selectedDoctor = doctor;
+      notifyListeners();
+    }
+    
+    return doctor;
   }
 
   /// Search doctors by name or specialization
@@ -344,6 +376,79 @@ class DoctorProvider with ChangeNotifier {
     }
   }
 
+  /// Change user role (Admin function)
+  /// Changes a user's role in the system
+  Future<bool> updateUserRole(String userId, String newRole) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      await _firestoreService.updateUserRole(userId, newRole);
+
+      // If changing from doctor role, remove from local state
+      if (newRole != 'doctor') {
+        _doctors.removeWhere((doctor) => doctor.id == userId);
+        _filteredDoctors.removeWhere((doctor) => doctor.id == userId);
+        
+        if (_selectedDoctor?.id == userId) {
+          _selectedDoctor = null;
+        }
+      }
+
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _setError('Failed to update user role: ${e.toString()}');
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  /// Deactivate doctor (Admin function)
+  /// Deactivates a doctor account
+  Future<bool> deactivateDoctor(String doctorId) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      await _firestoreService.deactivateUser(doctorId);
+
+      // Update local state
+      _updateLocalDoctor(doctorId, {'isActive': false});
+
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _setError('Failed to deactivate doctor: ${e.toString()}');
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  /// Reactivate doctor (Admin function)
+  /// Reactivates a doctor account
+  Future<bool> reactivateDoctor(String doctorId) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      await _firestoreService.reactivateUser(doctorId);
+
+      // Update local state
+      _updateLocalDoctor(doctorId, {'isActive': true});
+
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _setError('Failed to reactivate doctor: ${e.toString()}');
+      _setLoading(false);
+      return false;
+    }
+  }
+
   /// Get doctor's available time slots for a specific day
   /// Returns available time slots based on doctor's schedule
   List<String> getDoctorTimeSlots(String doctorId, String dayOfWeek) {
@@ -401,7 +506,8 @@ class DoctorProvider with ChangeNotifier {
     // Update in main doctors list
     final doctorIndex = _doctors.indexWhere((d) => d.id == doctorId);
     if (doctorIndex != -1) {
-      
+      // In a real implementation, you would properly update the doctor object
+      // For now, we'll just trigger a refresh
       notifyListeners();
     }
 

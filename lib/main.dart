@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:hospital_management_system/const/app_theme.dart';
+import 'package:hospital_management_system/models/patient_model.dart';
 import 'package:hospital_management_system/providers/doctor_provider.dart';
+import 'package:hospital_management_system/providers/patient_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:hospital_management_system/providers/auth_provider.dart';
 import 'package:hospital_management_system/providers/appointment_provider.dart';
@@ -32,6 +34,7 @@ class HospitalManagementApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => AppointmentProvider()),
         ChangeNotifierProvider(create: (_) => DoctorProvider()),
+        ChangeNotifierProvider(create: (_) => PatientProvider()),
       ],
       child: MaterialApp(
         title: 'Hospital Management System',
@@ -39,11 +42,12 @@ class HospitalManagementApp extends StatelessWidget {
 
         // Professional theme system
         theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
+    
         themeMode: ThemeMode.system,
 
         // Start with splash screen for proper initialization
         home: const SplashScreen(),
+        
       ),
     );
   }

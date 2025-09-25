@@ -267,6 +267,79 @@ class PatientProvider with ChangeNotifier {
     }
   }
 
+  /// Deactivate patient (Admin function)
+  /// Deactivates a patient account
+  Future<bool> deactivatePatient(String patientId) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      await _firestoreService.deactivateUser(patientId);
+
+      // Update local state
+      _updateLocalPatient(patientId, {'isActive': false});
+
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _setError('Failed to deactivate patient: ${e.toString()}');
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  /// Reactivate patient (Admin function)
+  /// Reactivates a patient account
+  Future<bool> reactivatePatient(String patientId) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      await _firestoreService.reactivateUser(patientId);
+
+      // Update local state
+      _updateLocalPatient(patientId, {'isActive': true});
+
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _setError('Failed to reactivate patient: ${e.toString()}');
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  /// Change user role (Admin function)
+  /// Changes a user's role in the system
+  Future<bool> changeUserRole(String userId, String newRole) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      await _firestoreService.updateUserRole(userId, newRole);
+
+      // If changing from patient role, remove from local state
+      if (newRole != 'patient') {
+        _patients.removeWhere((patient) => patient.id == userId);
+        _filteredPatients.removeWhere((patient) => patient.id == userId);
+        
+        if (_selectedPatient?.id == userId) {
+          _selectedPatient = null;
+        }
+      }
+
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _setError('Failed to change user role: ${e.toString()}');
+      _setLoading(false);
+      return false;
+    }
+  }
+
   /// Add allergy to patient
   /// Adds a new allergy to patient's allergy list
   Future<bool> addPatientAllergy(String patientId, String allergy) async {

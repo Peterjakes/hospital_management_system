@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:hospital_management_system/const/app_theme.dart';
+import 'package:hospital_management_system/screens/patient/medical_records_screen.dart';
+import 'package:hospital_management_system/screens/patient/patient_profile_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:hospital_management_system/providers/auth_provider.dart';
 import 'package:hospital_management_system/providers/appointment_provider.dart';
 import 'package:hospital_management_system/screens/auth/login_screen.dart';
 import 'package:hospital_management_system/screens/patient/book_appointment_screen.dart';
 import 'package:hospital_management_system/screens/patient/appointments_screen.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:hospital_management_system/models/appointment_model.dart';
 
-// Patient dashboard screen with appointment management
 class PatientDashboard extends StatefulWidget {
   const PatientDashboard({super.key});
 
@@ -84,17 +87,49 @@ class _PatientDashboardState extends State<PatientDashboard> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Patient Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.print),
-            onPressed: _showPrintDemo,
-            tooltip: 'Print Documents',
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF48BB78), Color(0xFF38A169)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _handleLogout,
-            tooltip: 'Logout',
+        ),
+        title: Text(
+          'Patient Dashboard',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: 20,
+          ),
+        ),
+        actions: [
+          Container(
+            margin: EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: Icon(Icons.print, color: Colors.white),
+              onPressed: _showPrintDemo,
+              tooltip: 'Print Documents',
+            ),
+          ),
+          Container(
+            margin: EdgeInsets.only(right: 16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: Icon(Icons.logout, color: Colors.white),
+              onPressed: _handleLogout,
+              tooltip: 'Logout',
+            ),
           ),
         ],
       ),
@@ -111,243 +146,348 @@ class _PatientDashboardState extends State<PatientDashboard> {
       case 1:
         return const AppointmentsScreen();
       case 2:
-        return _buildRecordsContent();
+        return const MedicalRecordsScreen();
       case 3:
-        return _buildProfileContent();
+        return const PatientProfileScreen();
       default:
-        return _buildDashboardContent();
+        return _buildRecordsContent();;
     }
   }
 
-  //Build dashboard overview content
+  // Enhanced dashboard overview content
   Widget _buildDashboardContent() {
     return Consumer2<AuthProvider, AppointmentProvider>(
       builder: (context, authProvider, appointmentProvider, child) {
         final upcomingAppointments = appointmentProvider.upcomingAppointments;
         final totalAppointments = appointmentProvider.patientAppointments.length;
         
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Welcome card
-              Card(
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppTheme.patientColor, AppTheme.secondaryColorDark],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+        return AnimationLimiter(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: AnimationConfiguration.toStaggeredList(
+                duration: const Duration(milliseconds: 375),
+                childAnimationBuilder: (widget) => SlideAnimation(
+                  horizontalOffset: 50.0,
+                  child: FadeInAnimation(child: widget),
+                ),
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Color(0xFF48BB78),
+                          Color(0xFF38A169),
+                          Color(0xFF2F855A),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0xFF48BB78).withOpacity(0.3),
+                          blurRadius: 20,
+                          offset: Offset(0, 10),
+                        ),
+                      ],
                     ),
-                    borderRadius: BorderRadius.circular(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Icon(
+                                Icons.favorite,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
+                            SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Welcome back,',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.8),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${authProvider.currentUserData?['firstName'] ?? 'Patient'}',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 16),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.psychology,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'How are you feeling today?',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.9),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  
+                  SizedBox(height: 32),
+                  
+                  Text(
+                    'Quick Overview',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF2D3748),
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  
+                  Row(
                     children: [
-                      Text(
-                        'Welcome back,',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.white70,
+                      Expanded(
+                        child: _buildModernStatCard(
+                          'Next Appointment', 
+                          upcomingAppointments.isNotEmpty 
+                              ? upcomingAppointments.first.formattedDateTime
+                              : 'No upcoming', 
+                          Icons.schedule_rounded, 
+                          Color(0xFF4A90E2)
                         ),
                       ),
-                      Text(
-                        '${authProvider.currentUserData?['firstName'] ?? 'Patient'}',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'How are you feeling today?',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.white70,
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: _buildModernStatCard(
+                          'Total Visits', 
+                          totalAppointments.toString(), 
+                          Icons.history_rounded, 
+                          Color(0xFF9F7AEA)
                         ),
                       ),
                     ],
                   ),
-                ),
-              ),
-              
-              const SizedBox(height: 20),
-              
-              // Quick stats
-              Text(
-                'Quick Overview',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      'Next Appointment', 
-                      upcomingAppointments.isNotEmpty 
-                          ? upcomingAppointments.first.formattedDateTime
-                          : 'No upcoming appointments', 
-                      Icons.schedule, 
-                      AppTheme.primaryColor
+                  
+                  SizedBox(height: 32),
+                  
+                  Text(
+                    'Quick Actions',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF2D3748),
+                      letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatCard(
-                      'Total Appointments', 
-                      totalAppointments.toString(), 
-                      Icons.history, 
-                      AppTheme.secondaryColor
-                    ),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 20),
-              
-              // Quick actions
-              Text(
-                'Quick Actions',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildActionCard(
-                      'Book Appointment',
-                      Icons.add,
-                      AppTheme.primaryColor,
-                      () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const BookAppointmentScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildActionCard(
-                      'View Records',
-                      Icons.folder,
-                      AppTheme.secondaryColor,
-                      () {
-                        setState(() {
-                          _selectedIndex = 2;
-                        });
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 20),
-              
-              // Recent Appointments
-              if (appointmentProvider.patientAppointments.isNotEmpty) ...[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Recent Appointments',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+                  SizedBox(height: 16),
+                  
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildModernActionCard(
+                          'Book Appointment',
+                          Icons.add_circle_rounded,
+                          Color(0xFF4A90E2),
+                          () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => const BookAppointmentScreen(),
+                              ),
+                            );
+                          },
+                        ),
                       ),
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: _buildModernActionCard(
+                          'View Records',
+                          Icons.folder_rounded,
+                          Color(0xFF48BB78),
+                          () {
+                            setState(() {
+                              _selectedIndex = 2;
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  SizedBox(height: 32),
+                  
+                  if (appointmentProvider.patientAppointments.isNotEmpty) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Recent Appointments',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF2D3748),
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedIndex = 1;
+                            });
+                          },
+                          child: Text(
+                            'View All',
+                            style: TextStyle(
+                              color: Color(0xFF4A90E2),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    TextButton(
-                      onPressed: () {
-                        setState(() {
-                          _selectedIndex = 1;
-                        });
-                      },
-                      child: const Text('View All'),
-                    ),
+                    SizedBox(height: 16),
+                    ...appointmentProvider.patientAppointments
+                        .take(3)
+                        .map((appointment) => _buildModernAppointmentPreviewCard(appointment)),
                   ],
-                ),
-                const SizedBox(height: 12),
-                ...appointmentProvider.patientAppointments
-                    .take(3)
-                    .map((appointment) => _buildAppointmentPreviewCard(appointment)),
-              ],
-            ],
+                ],
+              ),
+            ),
           ),
         );
       },
     );
   }
 
-  /// Build appointment preview card for dashboard
-  Widget _buildAppointmentPreviewCard(appointment) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppTheme.getStatusColor(appointment.status.value).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
+  /// Modern stat card with enhanced design
+  Widget _buildModernStatCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 4),
           ),
-          child: Icon(
-            Icons.calendar_today,
-            color: AppTheme.getStatusColor(appointment.status.value),
-          ),
+        ],
+        border: Border.all(
+          color: Colors.grey.withOpacity(0.1),
+          width: 1,
         ),
-        title: Text(appointment.formattedDateTime),
-        subtitle: Text(appointment.reasonForVisit),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: AppTheme.getStatusColor(appointment.status.value),
-            borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 24),
           ),
-          child: Text(
-            appointment.status.displayName,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
+          SizedBox(height: 12),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: color,
             ),
           ),
-        ),
-        onTap: () {
-          setState(() {
-            _selectedIndex = 1;
-          });
-        },
+          SizedBox(height: 4),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: Color(0xFF718096),
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
 
-  /// Build stat card widget
-  /// Learning: Reusable widget creation
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+  Widget _buildModernActionCard(String title, IconData icon, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: Colors.grey.withOpacity(0.1),
+            width: 1,
+          ),
+        ),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
               ),
+              child: Icon(icon, color: color, size: 24),
             ),
+            SizedBox(height: 12),
             Text(
               title,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppTheme.textSecondary,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF2D3748),
               ),
               textAlign: TextAlign.center,
             ),
@@ -357,31 +497,105 @@ class _PatientDashboardState extends State<PatientDashboard> {
     );
   }
 
-  // Build action card widget
-  Widget _buildActionCard(String title, IconData icon, Color color, VoidCallback onTap) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
+  Widget _buildModernAppointmentPreviewCard(Appointment appointment) {
+  // Get the status color - you need to implement this method in AppTheme
+  Color statusColor = _getStatusColor(appointment.status);
+  
+  return Container(
+    margin: EdgeInsets.only(bottom: 12),
+    padding: EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 10,
+          offset: Offset(0, 4),
+        ),
+      ],
+      border: Border.all(
+        color: Colors.grey.withOpacity(0.1),
+        width: 1,
+      ),
+    ),
+    child: Row(
+      children: [
+        Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            color: statusColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            Icons.calendar_today_rounded,
+            color: statusColor,
+            size: 24,
+          ),
+        ),
+        SizedBox(width: 16),
+        Expanded(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: color, size: 32),
-              const SizedBox(height: 8),
               Text(
-                title,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                appointment.formattedDateTime,
+                style: TextStyle(
+                  fontSize: 16,
                   fontWeight: FontWeight.w600,
+                  color: Color(0xFF2D3748),
                 ),
-                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 4),
+              Text(
+                appointment.reasonForVisit,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF718096),
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
         ),
-      ),
-    );
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: statusColor,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            appointment.status.displayName, // ✅ This should work now
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+// Add this helper method to your _PatientDashboardState class
+Color _getStatusColor(AppointmentStatus status) {
+  switch (status) {
+    case AppointmentStatus.scheduled:
+      return Color(0xFF4A90E2); // Blue
+    case AppointmentStatus.confirmed:
+      return Color(0xFF48BB78); // Green  
+    case AppointmentStatus.inProgress:
+      return Color(0xFF9F7AEA); // Purple
+    case AppointmentStatus.completed:
+      return Color(0xFF38A169); // Dark Green
+    case AppointmentStatus.cancelled:
+      return Color(0xFFE53E3E); // Red
+    case AppointmentStatus.noShow:
+      return Color(0xFFD69E2E); // Orange
   }
+}
 
   // Placeholder content for other tabs
   Widget _buildRecordsContent() {
@@ -396,34 +610,51 @@ class _PatientDashboardState extends State<PatientDashboard> {
     );
   }
 
-  // Build bottom navigation bar
   Widget _buildBottomNavigationBar() {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      currentIndex: _selectedIndex,
-      onTap: (index) {
-        setState(() {
-          _selectedIndex = index;
-        });
-      },
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.dashboard),
-          label: 'Dashboard',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.calendar_today),
-          label: 'Appointments',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.folder),
-          label: 'Records',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person),
-          label: 'Profile',
-        ),
-      ],
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: Offset(0, -2),
+          ),
+        ],
+      ),
+      child: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        currentIndex: _selectedIndex,
+        selectedItemColor: Color(0xFF48BB78),
+        unselectedItemColor: Color(0xFF718096),
+        selectedLabelStyle: TextStyle(fontWeight: FontWeight.w600),
+        unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard_rounded),
+            label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today_rounded),
+            label: 'Appointments',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.folder_rounded),
+            label: 'Records',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_rounded),
+            label: 'Profile',
+          ),
+        ],
+      ),
     );
   }
 }

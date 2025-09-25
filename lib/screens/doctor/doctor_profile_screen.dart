@@ -25,6 +25,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
   final _consultationFeeController = TextEditingController();
 
   bool _isEditing = false;
+  bool _isUploadingImage = false;
   List<String> _selectedDays = [];
   String _startTime = '09:00';
   String _endTime = '17:00';
@@ -362,8 +363,17 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                       border: Border.all(color: Colors.white, width: 2),
                     ),
                     child: IconButton(
-                      onPressed: _changeProfilePicture,
-                      icon: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                      onPressed: _isUploadingImage ? null : _changeProfilePicture,
+                      icon: _isUploadingImage 
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Icon(Icons.camera_alt, color: Colors.white, size: 20),
                       constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                     ),
                   ),
@@ -373,9 +383,15 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
           const SizedBox(height: 16),
           if (_isEditing)
             TextButton.icon(
-              onPressed: _changeProfilePicture,
-              icon: const Icon(Icons.camera_alt),
-              label: const Text('Change Photo'),
+              onPressed: _isUploadingImage ? null : _changeProfilePicture,
+              icon: _isUploadingImage 
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.camera_alt),
+              label: Text(_isUploadingImage ? 'Uploading...' : 'Change Photo'),
             ),
         ],
       ),
@@ -464,38 +480,63 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
   }
 
   Future<void> _changeProfilePicture() async {
+    if (!mounted || _isUploadingImage) return;
+    
+    setState(() {
+      _isUploadingImage = true;
+    });
+    
     try {
-      final String? imageUrl = await ImageService().uploadProfileImage(
+      final String? imageUrl = await ImageService().uploadProfileImageSimple(
         context,
         folder: 'doctors',
       );
       
-      if (imageUrl != null) {
+      if (imageUrl != null && mounted) {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
         final doctorProvider = Provider.of<DoctorProvider>(context, listen: false);
         
-        await doctorProvider.updateDoctorProfile(
+        final success = await doctorProvider.updateDoctorProfile(
           doctorId: authProvider.currentUserId!,
           profileImageUrl: imageUrl,
         );
+        
+        if (mounted) {
+          if (success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Profile picture updated successfully!'),
+                backgroundColor: AppTheme.successColor,
+              ),
+            );
+            // Refresh doctor data to show new image
+            await doctorProvider.getDoctor(authProvider.currentUserId!);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to update profile: ${doctorProvider.errorMessage ?? 'Unknown error'}'),
+                backgroundColor: AppTheme.errorColor,
+              ),
+            );
+          }
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to upload image: ${e.toString()}'),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to upload image: ${e.toString()}'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingImage = false;
+        });
+      }
     }
-  }
-
-  void _changeProfilePictureOld() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Photo upload feature coming soon!'),
-        backgroundColor: AppTheme.warningColor,
-      ),
-    );
   }
 
   Future<void> _saveProfile(DoctorProvider doctorProvider, AuthProvider authProvider) async {
@@ -538,7 +579,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('✅ Profile updated successfully!'),
+          content: Text('Profile updated successfully!'),
           backgroundColor: AppTheme.successColor,
         ),
       );

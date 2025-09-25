@@ -79,11 +79,13 @@ class ImageService {
     }
   }
 
-  /// Show image source selection dialog
-  Future<XFile?> showImageSourceDialog(context) async {
+  /// Show image source selection dialog - FIXED VERSION
+  Future<XFile?> showImageSourceDialog(BuildContext context) async {
+    if (!context.mounted) return null;
+    
     return await showDialog<XFile?>(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: const Text('Select Image Source'),
           content: Column(
@@ -93,10 +95,16 @@ class ImageService {
                 leading: const Icon(Icons.photo_library),
                 title: const Text('Gallery'),
                 onTap: () async {
-                  Navigator.of(context).pop();
-                  final image = await pickImageFromGallery();
-                  if (context.mounted) {
-                    Navigator.of(context).pop(image);
+                  Navigator.of(dialogContext).pop(); // Close dialog first
+                  try {
+                    final image = await pickImageFromGallery();
+                    if (context.mounted) {
+                      Navigator.of(context).pop(image); // Return result
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      Navigator.of(context).pop(null); // Return null on error
+                    }
                   }
                 },
               ),
@@ -104,10 +112,16 @@ class ImageService {
                 leading: const Icon(Icons.camera_alt),
                 title: const Text('Camera'),
                 onTap: () async {
-                  Navigator.of(context).pop();
-                  final image = await pickImageFromCamera();
-                  if (context.mounted) {
-                    Navigator.of(context).pop(image);
+                  Navigator.of(dialogContext).pop(); // Close dialog first
+                  try {
+                    final image = await pickImageFromCamera();
+                    if (context.mounted) {
+                      Navigator.of(context).pop(image); // Return result
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      Navigator.of(context).pop(null); // Return null on error
+                    }
                   }
                 },
               ),
@@ -115,7 +129,7 @@ class ImageService {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.of(dialogContext).pop(null),
               child: const Text('Cancel'),
             ),
           ],
@@ -124,58 +138,156 @@ class ImageService {
     );
   }
 
-  /// Upload profile image with loading dialog
-  Future<String?> uploadProfileImage(context, {String? folder}) async {
+  /// Upload profile image with loading dialog - COMPLETELY REWRITTEN
+  Future<String?> uploadProfileImage(BuildContext context, {String? folder}) async {
+    if (!context.mounted) return null;
+
+    try {
+      // Step 1: Show image source selection
+      final XFile? imageFile = await showImageSourceDialog(context);
+      
+      if (imageFile == null) {
+        return null; // User cancelled or error occurred
+      }
+
+      if (!context.mounted) return null;
+
+      // Step 2: Show upload progress dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => WillPopScope(
+          onWillPop: () async => false, // Prevent dismissing
+          child: const AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Uploading image to cloud...'),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      // Step 3: Upload to Cloudinary
+      final String imageUrl = await uploadImage(imageFile, folder: folder);
+      
+      // Step 4: Close loading dialog
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+      }
+      
+      return imageUrl;
+      
+    } catch (e) {
+      // Make sure to close any open dialogs
+      if (context.mounted) {
+        // Try to pop any loading dialog that might be open
+        try {
+          Navigator.of(context).pop();
+        } catch (popError) {
+          // Dialog might not be open, ignore
+        }
+      }
+      
+      // Re-throw the error to be handled by calling code
+      throw Exception('Failed to upload profile image: ${e.toString()}');
+    }
+  }
+
+  /// Alternative simpler upload method
+  Future<String?> uploadProfileImageSimple(BuildContext context, {String? folder}) async {
+    if (!context.mounted) return null;
+
+    XFile? imageFile;
+    
+    // Step 1: Pick image source
+    final source = await showDialog<ImageSource>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Select Image Source'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Gallery'),
+                onTap: () => Navigator.of(dialogContext).pop(ImageSource.gallery),
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Camera'),
+                onTap: () => Navigator.of(dialogContext).pop(ImageSource.camera),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (source == null || !context.mounted) return null;
+
+    // Step 2: Pick image
+    try {
+      imageFile = await _picker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+    } catch (e) {
+      throw Exception('Failed to pick image: ${e.toString()}');
+    }
+
+    if (imageFile == null || !context.mounted) return null;
+
+    // Step 3: Show loading and upload
     try {
       // Show loading dialog
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const AlertDialog(
+        builder: (dialogContext) => const AlertDialog(
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               CircularProgressIndicator(),
               SizedBox(height: 16),
-              Text('Selecting and uploading image...'),
+              Text('Uploading image...'),
             ],
           ),
         ),
       );
 
-      // Pick image
-      final XFile? imageFile = await showImageSourceDialog(context);
-      
-      if (imageFile == null) {
-        Navigator.of(context).pop(); // Close loading dialog
-        return null;
-      }
-
-      // Update loading message
-      Navigator.of(context).pop(); // Close selection dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Uploading image to cloud...'),
-            ],
-          ),
-        ),
-      );
-
-      // Upload to Cloudinary
+      // Upload image
       final String imageUrl = await uploadImage(imageFile, folder: folder);
       
-      Navigator.of(context).pop(); // Close loading dialog
+      // Close loading dialog
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+      
       return imageUrl;
+      
     } catch (e) {
-      Navigator.of(context).pop(); // Close loading dialog
-      throw Exception('Failed to upload profile image: ${e.toString()}');
+      // Close loading dialog on error
+      if (context.mounted) {
+        try {
+          Navigator.of(context).pop();
+        } catch (popError) {
+          // Ignore if dialog already closed
+        }
+      }
+      throw e;
     }
   }
 

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hospital_management_system/models/user_model.dart' as app_user;
+import 'package:hospital_management_system/models/patient_model.dart';
 import 'package:hospital_management_system/services/auth_service.dart';
 
 /// Authentication provider managing user authentication state
-/// Basic state management
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
 
@@ -95,42 +95,92 @@ class AuthProvider with ChangeNotifier {
     return false;
   }
 
-  /// Register new user 
+  /// Register new user with basic info only (for doctors/admins)
   Future<bool> registerUser({
-  required String email,
-  required String password,
-  required String firstName,
-  required String lastName,
-  app_user.UserRole role = app_user.UserRole.patient,
-}) async {
-  _setLoading(true);
-  _clearError();
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+    app_user.UserRole role = app_user.UserRole.patient,
+  }) async {
+    _setLoading(true);
+    _clearError();
 
-  try {
-    // Register user and save data
-    final userModel = await _authService.registerUser(
-      email: email,
-      password: password,
-      firstName: firstName,
-      lastName: lastName,
-      role: role,
-    );
+    try {
+      // Register user and save data
+      final userModel = await _authService.registerUser(
+        email: email,
+        password: password,
+        firstName: firstName,
+        lastName: lastName,
+        role: role,
+      );
 
-    if (userModel != null) {
-      _currentFirebaseUser = _authService.currentUser;
-      _currentUserData = userModel.toMap();
-      notifyListeners();
+      if (userModel != null) {
+        _currentFirebaseUser = _authService.currentUser;
+        _currentUserData = userModel.toMap();
+        notifyListeners();
+        _setLoading(false);
+        return true;
+      }
+    } catch (e) {
+      _setError(e.toString());
       _setLoading(false);
-      return true;
+      return false;
     }
-  } catch (e) {
-    _setError(e.toString());
     _setLoading(false);
     return false;
   }
-  _setLoading(false);
-  return false;
-}
+
+  /// Register new patient with complete medical information
+  Future<bool> registerPatient({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+    required DateTime dateOfBirth,
+    required String gender,
+    required String phoneNumber,
+    required String address,
+    required String emergencyContactName,
+    required String emergencyContactPhone,
+    required String bloodGroup,
+  }) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      // Register patient with complete medical data
+      final patient = await _authService.registerPatient(
+        email: email,
+        password: password,
+        firstName: firstName,
+        lastName: lastName,
+        dateOfBirth: dateOfBirth,
+        gender: gender,
+        phoneNumber: phoneNumber,
+        address: address,
+        emergencyContactName: emergencyContactName,
+        emergencyContactPhone: emergencyContactPhone,
+        bloodGroup: bloodGroup,
+      );
+
+      if (patient != null) {
+        _currentFirebaseUser = _authService.currentUser;
+        _currentUserData = patient.toMap();
+        _currentUserData!['id'] = patient.id;
+        notifyListeners();
+        _setLoading(false);
+        return true;
+      }
+    } catch (e) {
+      _setError(e.toString());
+    }
+
+    _setLoading(false);
+    return false;
+  }
+
   /// Send password reset email
   Future<bool> sendPasswordResetEmail(String email) async {
     _setLoading(true);

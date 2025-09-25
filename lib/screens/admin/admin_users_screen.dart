@@ -5,7 +5,6 @@ import 'package:hospital_management_system/providers/patient_provider.dart';
 import 'package:hospital_management_system/providers/doctor_provider.dart';
 import 'package:hospital_management_system/models/user_model.dart';
 
-
 /// Admin users management screen
 class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({super.key});
@@ -245,6 +244,16 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> with SingleTickerPr
               ),
             ),
             const PopupMenuItem(
+              value: 'change_role',
+              child: Row(
+                children: [
+                  Icon(Icons.person_pin, size: 16, color: Colors.blue),
+                  SizedBox(width: 8),
+                  Text('Change Role', style: TextStyle(color: Colors.blue)),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
               value: 'deactivate',
               child: Row(
                 children: [
@@ -334,6 +343,16 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> with SingleTickerPr
                 ],
               ),
             ),
+            const PopupMenuItem(
+              value: 'change_role',
+              child: Row(
+                children: [
+                  Icon(Icons.person_pin, size: 16, color: Colors.blue),
+                  SizedBox(width: 8),
+                  Text('Change Role', style: TextStyle(color: Colors.blue)),
+                ],
+              ),
+            ),
             PopupMenuItem(
               value: doctor.isAvailable ? 'deactivate' : 'activate',
               child: Row(
@@ -380,15 +399,27 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> with SingleTickerPr
       case 'edit':
         _showEditPatientDialog(patient, patientProvider);
         break;
+      case 'change_role':
+        _showChangeRoleDialog(patient.id, patient.fullName, 'patient');
+        break;
       case 'deactivate':
-        _showDeactivateDialog('patient', patient.fullName, () {
-          // TODO: Implement patient deactivation
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Patient deactivated successfully'),
-              backgroundColor: AppTheme.successColor,
-            ),
-          );
+        _showDeactivateDialog('patient', patient.fullName, () async {
+          final success = await patientProvider.deactivatePatient(patient.id);
+          if (success && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Patient deactivated successfully'),
+                backgroundColor: AppTheme.successColor,
+              ),
+            );
+          } else if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to deactivate patient'),
+                backgroundColor: AppTheme.errorColor,
+              ),
+            );
+          }
         });
         break;
     }
@@ -401,6 +432,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> with SingleTickerPr
         break;
       case 'edit':
         _showEditDoctorDialog(doctor, doctorProvider);
+        break;
+      case 'change_role':
+        _showChangeRoleDialog(doctor.id, doctor.fullName, 'doctor');
         break;
       case 'activate':
       case 'deactivate':
@@ -493,19 +527,414 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> with SingleTickerPr
   }
 
   void _showEditPatientDialog(patient, PatientProvider patientProvider) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Patient editing feature coming soon!'),
-        backgroundColor: AppTheme.warningColor,
+    final firstNameController = TextEditingController(text: patient.firstName);
+    final lastNameController = TextEditingController(text: patient.lastName);
+    final phoneController = TextEditingController(text: patient.phoneNumber);
+    final addressController = TextEditingController(text: patient.address);
+    final emergencyContactController = TextEditingController(text: patient.emergencyContactName);
+    final emergencyPhoneController = TextEditingController(text: patient.emergencyContactPhone);
+    final insuranceNumberController = TextEditingController(text: patient.insuranceNumber ?? '');
+    final insuranceProviderController = TextEditingController(text: patient.insuranceProvider ?? '');
+    
+    String selectedBloodGroup = patient.bloodGroup;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Edit Patient - ${patient.fullName}'),
+        content: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.8,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Basic Information
+                TextField(
+                  controller: firstNameController,
+                  decoration: const InputDecoration(
+                    labelText: 'First Name',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: lastNameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Last Name',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: phoneController,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone Number',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: addressController,
+                  decoration: const InputDecoration(
+                    labelText: 'Address',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 16),
+                
+                // Blood Group Dropdown
+                DropdownButtonFormField<String>(
+                  value: selectedBloodGroup,
+                  decoration: const InputDecoration(
+                    labelText: 'Blood Group',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+                      .map((group) => DropdownMenuItem(
+                            value: group, 
+                            child: Text(group)
+                          ))
+                      .toList(),
+                  onChanged: (value) => selectedBloodGroup = value!,
+                ),
+                const SizedBox(height: 16),
+                
+                // Emergency Contact
+                TextField(
+                  controller: emergencyContactController,
+                  decoration: const InputDecoration(
+                    labelText: 'Emergency Contact Name',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: emergencyPhoneController,
+                  decoration: const InputDecoration(
+                    labelText: 'Emergency Contact Phone',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 16),
+                
+                // Insurance Information
+                TextField(
+                  controller: insuranceProviderController,
+                  decoration: const InputDecoration(
+                    labelText: 'Insurance Provider',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: insuranceNumberController,
+                  decoration: const InputDecoration(
+                    labelText: 'Insurance Number',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              // Dispose controllers
+              firstNameController.dispose();
+              lastNameController.dispose();
+              phoneController.dispose();
+              addressController.dispose();
+              emergencyContactController.dispose();
+              emergencyPhoneController.dispose();
+              insuranceNumberController.dispose();
+              insuranceProviderController.dispose();
+              Navigator.of(context).pop();
+            },
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final success = await patientProvider.updatePatientProfile(
+                patientId: patient.id,
+                firstName: firstNameController.text.trim(),
+                lastName: lastNameController.text.trim(),
+                phoneNumber: phoneController.text.trim(),
+                address: addressController.text.trim(),
+                emergencyContactName: emergencyContactController.text.trim(),
+                emergencyContactPhone: emergencyPhoneController.text.trim(),
+              );
+              
+              if (success) {
+                await patientProvider.updatePatientMedicalInfo(
+                  patientId: patient.id,
+                  bloodGroup: selectedBloodGroup,
+                  insuranceNumber: insuranceNumberController.text.trim().isEmpty ? null : insuranceNumberController.text.trim(),
+                  insuranceProvider: insuranceProviderController.text.trim().isEmpty ? null : insuranceProviderController.text.trim(),
+                );
+              }
+              
+              // Dispose controllers
+              firstNameController.dispose();
+              lastNameController.dispose();
+              phoneController.dispose();
+              addressController.dispose();
+              emergencyContactController.dispose();
+              emergencyPhoneController.dispose();
+              insuranceNumberController.dispose();
+              insuranceProviderController.dispose();
+              
+              if (mounted) {
+                Navigator.of(context).pop();
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Patient updated successfully'),
+                      backgroundColor: AppTheme.successColor,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Failed to update patient'),
+                      backgroundColor: AppTheme.errorColor,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Update'),
+          ),
+        ],
       ),
     );
   }
 
   void _showEditDoctorDialog(doctor, DoctorProvider doctorProvider) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Doctor editing feature coming soon!'),
-        backgroundColor: AppTheme.warningColor,
+    final firstNameController = TextEditingController(text: doctor.firstName);
+    final lastNameController = TextEditingController(text: doctor.lastName);
+    final phoneController = TextEditingController(text: doctor.phoneNumber);
+    final biographyController = TextEditingController(text: doctor.biography);
+    final feeController = TextEditingController(text: doctor.consultationFee.toString());
+    final experienceController = TextEditingController(text: doctor.experienceYears.toString());
+    final startTimeController = TextEditingController(text: doctor.startTime);
+    final endTimeController = TextEditingController(text: doctor.endTime);
+    
+    List<String> selectedDays = List.from(doctor.availableDays);
+    List<String> allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Edit Doctor - Dr. ${doctor.fullName}'),
+        content: SingleChildScrollView(
+          child: StatefulBuilder(
+            builder: (context, setState) => Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Basic Information
+                TextField(
+                  controller: firstNameController,
+                  decoration: const InputDecoration(labelText: 'First Name'),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: lastNameController,
+                  decoration: const InputDecoration(labelText: 'Last Name'),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: phoneController,
+                  decoration: const InputDecoration(labelText: 'Phone Number'),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: biographyController,
+                  decoration: const InputDecoration(labelText: 'Biography'),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: feeController,
+                  decoration: const InputDecoration(labelText: 'Consultation Fee (KSh)'),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: experienceController,
+                  decoration: const InputDecoration(labelText: 'Experience (Years)'),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                
+                // Working Hours
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: startTimeController,
+                        decoration: const InputDecoration(labelText: 'Start Time'),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextField(
+                        controller: endTimeController,
+                        decoration: const InputDecoration(labelText: 'End Time'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
+                // Available Days
+                const Text('Available Days:', style: TextStyle(fontWeight: FontWeight.bold)),
+                ...allDays.map((day) => CheckboxListTile(
+                  title: Text(day),
+                  value: selectedDays.contains(day),
+                  onChanged: (checked) {
+                    setState(() {
+                      if (checked == true) {
+                        selectedDays.add(day);
+                      } else {
+                        selectedDays.remove(day);
+                      }
+                    });
+                  },
+                )).toList(),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final profileSuccess = await doctorProvider.updateDoctorProfile(
+                doctorId: doctor.id,
+                firstName: firstNameController.text.trim(),
+                lastName: lastNameController.text.trim(),
+                phoneNumber: phoneController.text.trim(),
+                biography: biographyController.text.trim(),
+                consultationFee: double.tryParse(feeController.text) ?? doctor.consultationFee,
+              );
+              
+              final scheduleSuccess = await doctorProvider.updateDoctorSchedule(
+                doctorId: doctor.id,
+                availableDays: selectedDays,
+                startTime: startTimeController.text.trim(),
+                endTime: endTimeController.text.trim(),
+                consultationDuration: doctor.consultationDuration,
+              );
+              
+              if (mounted) {
+                Navigator.of(context).pop();
+                if (profileSuccess && scheduleSuccess) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Doctor updated successfully'),
+                      backgroundColor: AppTheme.successColor,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Failed to update doctor'),
+                      backgroundColor: AppTheme.errorColor,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showChangeRoleDialog(String userId, String userName, String currentRole) {
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          String selectedRole = currentRole;
+          
+          return AlertDialog(
+            title: Text('Change Role - $userName'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Current Role: ${currentRole.toUpperCase()}'),
+                const SizedBox(height: 16),
+                const Text('Select New Role:'),
+                const SizedBox(height: 8),
+                RadioListTile<String>(
+                  title: const Text('Patient'),
+                  value: 'patient',
+                  groupValue: selectedRole,
+                  onChanged: (value) => setState(() => selectedRole = value!),
+                ),
+                RadioListTile<String>(
+                  title: const Text('Doctor'),
+                  value: 'doctor',
+                  groupValue: selectedRole,
+                  onChanged: (value) => setState(() => selectedRole = value!),
+                ),
+                RadioListTile<String>(
+                  title: const Text('Admin'),
+                  value: 'admin',
+                  groupValue: selectedRole,
+                  onChanged: (value) => setState(() => selectedRole = value!),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: selectedRole == currentRole ? null : () async {
+                  try {
+                    final doctorProvider = Provider.of<DoctorProvider>(context, listen: false);
+                    await doctorProvider.updateUserRole(userId, selectedRole);
+                    
+                    if (mounted) {
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Role changed to ${selectedRole.toUpperCase()} successfully'),
+                          backgroundColor: AppTheme.successColor,
+                        ),
+                      );
+                      
+                      // Refresh both providers to reflect changes
+                      Provider.of<PatientProvider>(context, listen: false).refreshPatients();
+                      Provider.of<DoctorProvider>(context, listen: false).refreshDoctors();
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Failed to change role'),
+                          backgroundColor: AppTheme.errorColor,
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Change Role'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

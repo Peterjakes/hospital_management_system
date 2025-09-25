@@ -5,9 +5,41 @@ import 'package:hospital_management_system/providers/auth_provider.dart';
 import 'package:hospital_management_system/models/user_model.dart';
 import 'package:hospital_management_system/widgets/custom_text_field.dart';
 import 'package:hospital_management_system/widgets/custom_button.dart';
-import 'package:hospital_management_system/widgets/custom_text_field.dart';
-import 'package:hospital_management_system/widgets/custom_button.dart';
 
+// Custom Dropdown Field Widget
+class CustomDropdownField<T> extends StatelessWidget {
+  final T value;
+  final String labelText;
+  final IconData? prefixIcon;
+  final List<DropdownMenuItem<T>> items;
+  final void Function(T?) onChanged;
+  final String? Function(T?)? validator;
+
+  const CustomDropdownField({
+    Key? key,
+    required this.value,
+    required this.labelText,
+    required this.items,
+    required this.onChanged,
+    this.prefixIcon,
+    this.validator,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<T>(
+      value: value,
+      decoration: InputDecoration(
+        labelText: labelText,
+        prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
+        border: const OutlineInputBorder(),
+      ),
+      items: items,
+      onChanged: onChanged,
+      validator: validator,
+    );
+  }
+}
 
 // Registration screen for new user accounts
 class RegisterScreen extends StatefulWidget {
@@ -19,6 +51,7 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _medicalFormKey = GlobalKey<FormState>(); // Separate key for medical form
   final _pageController = PageController();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
@@ -66,7 +99,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         return Scaffold(
           appBar: AppBar(
             title: Text(_currentPage == 0 ? 'Personal Information' : 'Medical Information'),
-            backgroundColor: AppTheme.primaryColor,
+            backgroundColor: Colors.blue, // Using Colors.blue instead of AppTheme.primaryColor
           ),
           body: Column(
             children: [
@@ -109,7 +142,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           Expanded(
             child: Container(
               height: 2,
-              color: _currentPage >= 1 ? AppTheme.primaryColor : Colors.grey[300],
+              color: _currentPage >= 1 ? Colors.blue : Colors.grey[300],
             ),
           ),
           _buildProgressStep(1, 'Medical', _currentPage >= 1),
@@ -126,7 +159,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           width: 30,
           height: 30,
           decoration: BoxDecoration(
-            color: isActive ? AppTheme.primaryColor : Colors.grey[300],
+            color: isActive ? Colors.blue : Colors.grey[300],
             shape: BoxShape.circle,
           ),
           child: Center(
@@ -144,7 +177,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           label,
           style: TextStyle(
             fontSize: 12,
-            color: isActive ? AppTheme.primaryColor : Colors.grey[600],
+            color: isActive ? Colors.blue : Colors.grey[600],
             fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
           ),
         ),
@@ -168,7 +201,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             const Text(
               'Please provide your basic information',
-              style: TextStyle(color: AppTheme.textSecondary),
+              style: TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 24),
             
@@ -299,150 +332,161 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget _buildMedicalInfoPage() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          const Text(
-            'Medical Information',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          const Text(
-            'Help us provide better care',
-            style: TextStyle(color: AppTheme.textSecondary),
-          ),
-          const SizedBox(height: 24),
-          
-          // Date of Birth
-          CustomTextField(
-            labelText: 'Date of Birth',
-            prefixIcon: Icons.cake,
-            readOnly: true,
-            onTap: _selectDateOfBirth,
-            controller: TextEditingController(
-              text: _selectedDateOfBirth != null 
-                  ? '${_selectedDateOfBirth!.day}/${_selectedDateOfBirth!.month}/${_selectedDateOfBirth!.year}'
-                  : '',
+      child: Form(
+        key: _medicalFormKey, // Use separate form key
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            const Text(
+              'Medical Information',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            validator: (value) {
-              if (_selectedDateOfBirth == null) {
-                return 'Date of birth is required';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-          
-          // Gender
-          CustomDropdownField<String>(
-            value: _selectedGender,
-            labelText: 'Gender',
-            prefixIcon: Icons.person,
-            items: ['Male', 'Female', 'Other'].map((gender) {
-              return DropdownMenuItem<String>(
-                value: gender,
-                child: Text(gender),
-              );
-            }).toList(),
-            onChanged: (value) {
-              setState(() {
-                _selectedGender = value!;
-              });
-            },
-          ),
-          const SizedBox(height: 16),
-          
-          // Blood Group
-          CustomDropdownField<String>(
-            value: _selectedBloodGroup,
-            labelText: 'Blood Group',
-            prefixIcon: Icons.bloodtype,
-            items: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((group) {
-              return DropdownMenuItem<String>(
-                value: group,
-                child: Text(group),
-              );
-            }).toList(),
-            onChanged: (value) {
-              setState(() {
-                _selectedBloodGroup = value!;
-              });
-            },
-          ),
-          const SizedBox(height: 16),
-          
-          // Address
-          CustomTextField(
-            controller: _addressController,
-            labelText: 'Address',
-            prefixIcon: Icons.location_on,
-            maxLines: 2,
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Address is required';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-          
-          // Emergency Contact Name
-          CustomTextField(
-            controller: _emergencyNameController,
-            labelText: 'Emergency Contact Name',
-            prefixIcon: Icons.contact_emergency,
-            textCapitalization: TextCapitalization.words,
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Emergency contact name is required';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-          
-          // Emergency Contact Phone
-          CustomTextField(
-            controller: _emergencyPhoneController,
-            labelText: 'Emergency Contact Phone',
-            prefixIcon: Icons.phone,
-            keyboardType: TextInputType.phone,
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Emergency contact phone is required';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 24),
-          
-          // Terms and conditions
-          Row(
-            children: [
-              Checkbox(
-                value: _agreedToTerms,
-                onChanged: (value) {
-                  setState(() {
-                    _agreedToTerms = value ?? false;
-                  });
-                },
-              ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _agreedToTerms = !_agreedToTerms;
-                    });
-                  },
-                  child: const Text(
-                    'I agree to the Terms and Conditions and Privacy Policy',
-                    style: TextStyle(fontSize: 14),
-                  ),
+            const Text(
+              'Help us provide better care',
+              style: TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 24),
+            
+            // Date of Birth
+            GestureDetector(
+              onTap: _selectDateOfBirth,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.cake),
+                    const SizedBox(width: 12),
+                    Text(
+                      _selectedDateOfBirth != null 
+                          ? '${_selectedDateOfBirth!.day}/${_selectedDateOfBirth!.month}/${_selectedDateOfBirth!.year}'
+                          : 'Select Date of Birth',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: _selectedDateOfBirth != null ? Colors.black : Colors.grey,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ],
+            ),
+            const SizedBox(height: 16),
+            
+            // Gender
+            CustomDropdownField<String>(
+              value: _selectedGender,
+              labelText: 'Gender',
+              prefixIcon: Icons.person,
+              items: ['Male', 'Female', 'Other'].map((gender) {
+                return DropdownMenuItem<String>(
+                  value: gender,
+                  child: Text(gender),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedGender = value!;
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+            
+            // Blood Group
+            CustomDropdownField<String>(
+              value: _selectedBloodGroup,
+              labelText: 'Blood Group',
+              prefixIcon: Icons.bloodtype,
+              items: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((group) {
+                return DropdownMenuItem<String>(
+                  value: group,
+                  child: Text(group),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedBloodGroup = value!;
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+            
+            // Address
+            CustomTextField(
+              controller: _addressController,
+              labelText: 'Address',
+              prefixIcon: Icons.location_on,
+              maxLines: 2,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Address is required';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            
+            // Emergency Contact Name
+            CustomTextField(
+              controller: _emergencyNameController,
+              labelText: 'Emergency Contact Name',
+              prefixIcon: Icons.contact_emergency,
+              textCapitalization: TextCapitalization.words,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Emergency contact name is required';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            
+            // Emergency Contact Phone
+            CustomTextField(
+              controller: _emergencyPhoneController,
+              labelText: 'Emergency Contact Phone',
+              prefixIcon: Icons.phone,
+              keyboardType: TextInputType.phone,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Emergency contact phone is required';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 24),
+            
+            // Terms and conditions
+            Row(
+              children: [
+                Checkbox(
+                  value: _agreedToTerms,
+                  onChanged: (value) {
+                    setState(() {
+                      _agreedToTerms = value ?? false;
+                    });
+                  },
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _agreedToTerms = !_agreedToTerms;
+                      });
+                    },
+                    child: const Text(
+                      'I agree to the Terms and Conditions and Privacy Policy',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -512,13 +556,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // handle enhanced registration with medical data
   // complete registration with all patient data
   Future<void> _handleRegistration() async {
-    if (!_formKey.currentState!.validate()) return;
+    // Validate medical form
+    if (!_medicalFormKey.currentState!.validate()) return;
+    
+    // Check if date of birth is selected
+    if (_selectedDateOfBirth == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select your date of birth'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
     
     if (!_agreedToTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please agree to the terms and conditions'),
-          backgroundColor: AppTheme.errorColor,
+          backgroundColor: Colors.red,
         ),
       );
       return;
@@ -526,12 +582,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     
-    final success = await authProvider.registerUser(
+    // Debug print to check if method is being called
+    print('Attempting to register patient...');
+    
+    final success = await authProvider.registerPatient(
       email: _emailController.text.trim(),
       password: _passwordController.text,
       firstName: _firstNameController.text.trim(),
       lastName: _lastNameController.text.trim(),
-      role: _selectedRole,
+      dateOfBirth: _selectedDateOfBirth!,
+      gender: _selectedGender,
+      phoneNumber: _phoneController.text.trim(),
+      address: _addressController.text.trim(),
+      emergencyContactName: _emergencyNameController.text.trim(),
+      emergencyContactPhone: _emergencyPhoneController.text.trim(),
+      bloodGroup: _selectedBloodGroup,
     );
 
     if (!mounted) return;
@@ -539,8 +604,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('✅ Registration successful! Please login to continue.'),
-          backgroundColor: AppTheme.successColor,
+          content: Text('Registration successful! Please login to continue.'),
+          backgroundColor: Colors.green,
         ),
       );
       
@@ -549,7 +614,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.errorMessage ?? 'Registration failed'),
-          backgroundColor: AppTheme.errorColor,
+          backgroundColor: Colors.red,
         ),
       );
     }

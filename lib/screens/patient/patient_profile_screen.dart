@@ -25,6 +25,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
   final _emergencyPhoneController = TextEditingController();
 
   bool _isEditing = false;
+  bool _isUploadingImage = false;
 
   @override
   void initState() {
@@ -286,8 +287,17 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                       border: Border.all(color: Colors.white, width: 2),
                     ),
                     child: IconButton(
-                      onPressed: _changeProfilePicture,
-                      icon: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                      onPressed: _isUploadingImage ? null : _changeProfilePicture,
+                      icon: _isUploadingImage 
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Icon(Icons.camera_alt, color: Colors.white, size: 20),
                       constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                     ),
                   ),
@@ -297,9 +307,15 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
           const SizedBox(height: 16),
           if (_isEditing)
             TextButton.icon(
-              onPressed: _changeProfilePicture,
-              icon: const Icon(Icons.camera_alt),
-              label: const Text('Change Photo'),
+              onPressed: _isUploadingImage ? null : _changeProfilePicture,
+              icon: _isUploadingImage 
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.camera_alt),
+              label: Text(_isUploadingImage ? 'Uploading...' : 'Change Photo'),
             ),
         ],
       ),
@@ -329,38 +345,63 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
   }
 
   Future<void> _changeProfilePicture() async {
+    if (!mounted || _isUploadingImage) return;
+    
+    setState(() {
+      _isUploadingImage = true;
+    });
+    
     try {
-      final String? imageUrl = await ImageService().uploadProfileImage(
+      final String? imageUrl = await ImageService().uploadProfileImageSimple(
         context,
         folder: 'patients',
       );
       
-      if (imageUrl != null) {
+      if (imageUrl != null && mounted) {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
         final patientProvider = Provider.of<PatientProvider>(context, listen: false);
         
-        await patientProvider.updatePatientProfile(
+        final success = await patientProvider.updatePatientProfile(
           patientId: authProvider.currentUserId!,
           profileImageUrl: imageUrl,
         );
+        
+        if (mounted) {
+          if (success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Profile picture updated successfully!'),
+                backgroundColor: AppTheme.successColor,
+              ),
+            );
+            // Refresh patient data to show new image
+            await patientProvider.getPatient(authProvider.currentUserId!);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to update profile: ${patientProvider.errorMessage ?? 'Unknown error'}'),
+                backgroundColor: AppTheme.errorColor,
+              ),
+            );
+          }
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to upload image: ${e.toString()}'),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to upload image: ${e.toString()}'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingImage = false;
+        });
+      }
     }
-  }
-
-  void _changeProfilePictureOld() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Photo upload feature coming soon!'),
-        backgroundColor: AppTheme.warningColor,
-      ),
-    );
   }
 
   Future<void> _saveProfile(PatientProvider patientProvider, AuthProvider authProvider) async {
@@ -379,13 +420,12 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
     if (!mounted) return;
 
     if (success) {
-    
       setState(() {
         _isEditing = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('✅ Profile updated successfully!'),
+          content: Text('Profile updated successfully!'),
           backgroundColor: AppTheme.successColor,
         ),
       );

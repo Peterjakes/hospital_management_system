@@ -3,9 +3,9 @@ import 'package:hospital_management_system/const/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:hospital_management_system/providers/patient_provider.dart';
 import 'package:hospital_management_system/providers/doctor_provider.dart';
+import 'package:hospital_management_system/services/system_reports_service.dart';
 
-
-/// Admin reports and analytics screen
+/// Admin reports and analytics screen with real PDF generation using SystemReportsService with provider data
 class AdminReportsScreen extends StatefulWidget {
   const AdminReportsScreen({super.key});
 
@@ -14,6 +14,8 @@ class AdminReportsScreen extends StatefulWidget {
 }
 
 class _AdminReportsScreenState extends State<AdminReportsScreen> {
+  final SystemReportsService _reportsService = SystemReportsService();
+
   @override
   void initState() {
     super.initState();
@@ -41,7 +43,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Comprehensive system reports and analytics',
+                'Comprehensive system reports and analytics using real data',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: AppTheme.textSecondary,
                 ),
@@ -49,7 +51,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
               const SizedBox(height: 24),
 
               // Quick Actions
-              _buildQuickActions(),
+              _buildQuickActions(patientProvider, doctorProvider),
               const SizedBox(height: 24),
 
               // System Overview
@@ -67,7 +69,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
               const SizedBox(height: 24),
 
               // Report Generation
-              _buildReportGeneration(),
+              _buildReportGeneration(patientProvider, doctorProvider),
             ],
           ),
         );
@@ -75,7 +77,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
     );
   }
 
-  Widget _buildQuickActions() {
+  Widget _buildQuickActions(PatientProvider patientProvider, DoctorProvider doctorProvider) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -96,16 +98,16 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                     'Generate Report',
                     Icons.assessment,
                     AppTheme.primaryColor,
-                    _generateSystemReport,
+                    () => _generateSystemReport(patientProvider, doctorProvider),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildActionButton(
-                    'Export Data',
-                    Icons.download,
+                    'Save to Storage',
+                    Icons.cloud_upload,
                     AppTheme.secondaryColor,
-                    _exportData,
+                    () => _saveReportToStorage(patientProvider, doctorProvider),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -114,7 +116,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                     'Print Reports',
                     Icons.print,
                     AppTheme.adminColor,
-                    _printReports,
+                    () => _printReports(patientProvider, doctorProvider),
                   ),
                 ),
               ],
@@ -141,6 +143,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
     final totalPatients = patientProvider.patients.length;
     final totalDoctors = doctorProvider.doctors.length;
     final availableDoctors = doctorProvider.availableDoctors.length;
+    final totalDepartments = doctorProvider.specializations.length;
 
     return Card(
       child: Padding(
@@ -149,7 +152,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'System Overview',
+              'System Overview (Real Data)',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -187,7 +190,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                 Expanded(
                   child: _buildOverviewCard(
                     'Departments',
-                    '12',
+                    totalDepartments.toString(),
                     Icons.business,
                     AppTheme.primaryColor,
                   ),
@@ -235,7 +238,27 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
     final stats = patientProvider.getPatientStatistics();
     
     if (stats.isEmpty) {
-      return const SizedBox.shrink();
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Icon(Icons.info, color: AppTheme.warningColor, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                'No patient data available',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              Text(
+                'Load patients to see analytics',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     return Card(
@@ -245,7 +268,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Patient Analytics',
+              'Patient Analytics (Real Data)',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -312,7 +335,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
             // Blood Groups
             if (stats['bloodGroups'] != null) ...[
               Text(
-                'Blood Group Distribution:',
+                'Blood Group Distribution (From Real Data):',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -358,7 +381,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Doctor Analytics',
+              'Doctor Analytics (Real Data)',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -399,7 +422,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
             if (topRatedDoctors.isNotEmpty) ...[
               const SizedBox(height: 16),
               Text(
-                'Top Rated Doctors:',
+                'Top Rated Doctors (From Real Data):',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -464,7 +487,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
     );
   }
 
-  Widget _buildReportGeneration() {
+  Widget _buildReportGeneration(PatientProvider patientProvider, DoctorProvider doctorProvider) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -472,43 +495,51 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Report Generation',
+              'Report Generation (Using Real Provider Data)',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 16),
             
-            // Report Types
+            // Report Types using your SystemReportsService with provider data
             _buildReportType(
-              'Patient Demographics Report',
-              'Detailed analysis of patient demographics, age groups, and medical conditions',
+              'Patient Statistics Report',
+              'Detailed analysis of patient demographics from real provider data',
               Icons.people,
-              () => _generateReport('demographics'),
+              () => _generateSpecificReport('patient', patientProvider, doctorProvider),
             ),
             const SizedBox(height: 12),
             
             _buildReportType(
               'Doctor Performance Report',
-              'Analysis of doctor ratings, appointments, and availability statistics',
+              'Analysis of doctor ratings and performance from real provider data',
               Icons.medical_services,
-              () => _generateReport('performance'),
+              () => _generateSpecificReport('doctor', patientProvider, doctorProvider),
             ),
             const SizedBox(height: 12),
             
             _buildReportType(
-              'Department Utilization Report',
-              'Department-wise patient distribution and resource utilization',
-              Icons.business,
-              () => _generateReport('departments'),
+              'Appointment Analytics Report',
+              'Monthly appointment statistics and Firebase appointment data',
+              Icons.calendar_today,
+              () => _generateSpecificReport('appointment', patientProvider, doctorProvider),
             ),
             const SizedBox(height: 12),
             
             _buildReportType(
-              'Financial Summary Report',
-              'Revenue analysis, consultation fees, and payment statistics',
-              Icons.attach_money,
-              () => _generateReport('financial'),
+              'System Analytics Report',
+              'Complete system usage patterns with real provider data',
+              Icons.analytics,
+              () => _generateSpecificReport('system', patientProvider, doctorProvider),
+            ),
+            const SizedBox(height: 12),
+            
+            _buildReportType(
+              'Complete System Report PDF',
+              'Comprehensive PDF report with all real data from providers',
+              Icons.picture_as_pdf,
+              () => _generateCompletePDFReport(patientProvider, doctorProvider),
             ),
           ],
         ),
@@ -559,39 +590,238 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
     );
   }
 
-  void _generateSystemReport() {
-    _showReportDialog('System Report', 'Generating comprehensive system report...');
+  // Updated methods using the new SystemReportsService with provider data
+
+  Future<void> _generateSystemReport(PatientProvider patientProvider, DoctorProvider doctorProvider) async {
+    _showLoadingDialog('System Report', 'Generating comprehensive system report with real provider data...');
+    
+    try {
+      await _reportsService.printSystemReportsFromProviders(patientProvider, doctorProvider);
+      
+      Navigator.of(context).pop();
+      _showSuccessSnackbar('System Report generated and sent to printer using real data!');
+    } catch (e) {
+      Navigator.of(context).pop();
+      _showErrorSnackbar('Failed to generate system report: $e');
+    }
   }
 
-  void _exportData() {
-    _showReportDialog('Data Export', 'Exporting system data to CSV format...');
+  Future<void> _saveReportToStorage(PatientProvider patientProvider, DoctorProvider doctorProvider) async {
+    _showLoadingDialog('Save Report', 'Saving comprehensive system report with real data to Firebase Storage...');
+    
+    try {
+      final downloadUrl = await _reportsService.saveSystemReportToStorageFromProviders(patientProvider, doctorProvider);
+      
+      Navigator.of(context).pop();
+      
+      if (downloadUrl != null) {
+        _showSuccessSnackbar('Report saved to Firebase Storage successfully with real data!');
+      } else {
+        _showErrorSnackbar('Failed to save report to storage');
+      }
+    } catch (e) {
+      Navigator.of(context).pop();
+      _showErrorSnackbar('Failed to save report: $e');
+    }
   }
 
-  void _printReports() {
-    _showReportDialog('Print Reports', 'Preparing reports for printing...');
+  Future<void> _printReports(PatientProvider patientProvider, DoctorProvider doctorProvider) async {
+    _showLoadingDialog('Print Reports', 'Preparing comprehensive system reports with real provider data...');
+    
+    try {
+      await _reportsService.printSystemReportsFromProviders(patientProvider, doctorProvider);
+      
+      Navigator.of(context).pop();
+      _showSuccessSnackbar('Reports sent to printer successfully using real data!');
+    } catch (e) {
+      Navigator.of(context).pop();
+      _showErrorSnackbar('Failed to print reports: $e');
+    }
   }
 
-  void _generateReport(String reportType) {
+  Future<void> _generateSpecificReport(String reportType, PatientProvider patientProvider, DoctorProvider doctorProvider) async {
     String title = '';
+    
     switch (reportType) {
-      case 'demographics':
-        title = 'Patient Demographics Report';
+      case 'patient':
+        title = 'Patient Statistics Report';
         break;
-      case 'performance':
+      case 'doctor':
         title = 'Doctor Performance Report';
         break;
-      case 'departments':
-        title = 'Department Utilization Report';
+      case 'appointment':
+        title = 'Appointment Analytics Report';
         break;
-      case 'financial':
-        title = 'Financial Summary Report';
+      case 'system':
+        title = 'System Analytics Report';
         break;
     }
     
-    _showReportDialog(title, 'Generating $title...');
+    _showLoadingDialog(title, 'Generating $title with real provider data...');
+    
+    try {
+      // Use your SystemReportsService methods with provider data
+      switch (reportType) {
+        case 'patient':
+          final stats = _reportsService.generatePatientStatisticsFromProvider(patientProvider);
+          print('Patient Statistics Generated from Provider: $stats');
+          _showReportSummary('Patient Statistics', stats);
+          break;
+        case 'doctor':
+          final performance = _reportsService.generateDoctorPerformanceFromProvider(doctorProvider);
+          print('Doctor Performance Generated from Provider: $performance');
+          _showReportSummary('Doctor Performance', performance);
+          break;
+        case 'appointment':
+          final appointments = await _reportsService.generateAppointmentReport();
+          print('Appointment Report Generated: $appointments');
+          _showReportSummary('Appointment Analytics', appointments);
+          break;
+        case 'system':
+          final analytics = _reportsService.generateSystemAnalyticsFromProvider(patientProvider, doctorProvider);
+          print('System Analytics Generated from Providers: $analytics');
+          _showReportSummary('System Analytics', analytics);
+          break;
+      }
+      
+      Navigator.of(context).pop();
+      _showSuccessSnackbar('$title generated successfully with real data!');
+    } catch (e) {
+      Navigator.of(context).pop();
+      _showErrorSnackbar('Failed to generate $title: $e');
+    }
   }
 
-  void _showReportDialog(String title, String message) {
+  Future<void> _generateCompletePDFReport(PatientProvider patientProvider, DoctorProvider doctorProvider) async {
+    _showLoadingDialog('Complete PDF Report', 'Generating comprehensive PDF report with real provider data...');
+    
+    try {
+      final pdfData = await _reportsService.generateSystemReportPDFFromProviders(patientProvider, doctorProvider);
+      
+      Navigator.of(context).pop();
+      
+      // Show success and offer to print
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('PDF Report Generated'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.check_circle, color: AppTheme.successColor, size: 64),
+              const SizedBox(height: 16),
+              const Text('Complete system PDF report generated successfully with real provider data!'),
+              const SizedBox(height: 8),
+              Text(
+                'Size: ${(pdfData.length / 1024).toStringAsFixed(1)} KB',
+                style: TextStyle(color: AppTheme.textSecondary),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _printReports(patientProvider, doctorProvider);
+              },
+              icon: const Icon(Icons.print),
+              label: const Text('Print Now'),
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      Navigator.of(context).pop();
+      _showErrorSnackbar('Failed to generate PDF report: $e');
+    }
+  }
+
+  void _showReportSummary(String title, Map<String, dynamic> data) {
+    List<String> summaryLines = [];
+    
+    switch (title) {
+      case 'Patient Statistics':
+        summaryLines = [
+          'Total Patients: ${data['totalPatients']}',
+          'Gender Distribution:',
+          '  - Male: ${data['genderDistribution']['Male']}',
+          '  - Female: ${data['genderDistribution']['Female']}',
+          'Age Groups:',
+          '  - Children (0-18): ${data['ageGroups']['0-18']}',
+          '  - Young Adults (19-35): ${data['ageGroups']['19-35']}',
+          '  - Adults (36-50): ${data['ageGroups']['36-50']}',
+          'Blood Groups: ${(data['bloodGroupDistribution'] as Map).length} types',
+        ];
+        break;
+      case 'Doctor Performance':
+        final doctors = data['doctorPerformance'] as List;
+        summaryLines = [
+          'Total Doctors: ${data['totalDoctors']}',
+          'Doctors with Performance Data: ${doctors.length}',
+        ];
+        if (doctors.isNotEmpty) {
+          final top = doctors.first;
+          summaryLines.addAll([
+            'Top Performer: ${top['doctorName']}',
+            'Top Doctor Appointments: ${top['totalAppointments']}',
+            'Top Doctor Revenue: \$${top['totalRevenue'].toStringAsFixed(2)}',
+          ]);
+        }
+        break;
+      case 'System Analytics':
+        final totals = data['systemTotals'];
+        summaryLines = [
+          'System Totals:',
+          '  - Patients: ${totals['totalPatients']}',
+          '  - Doctors: ${totals['totalDoctors']}',
+          '  - Appointments: ${totals['totalAppointments']}',
+          'Peak Usage: ${data['usagePatterns']['peakHour']}',
+          'Busiest Day: ${data['usagePatterns']['busiestDay']}',
+        ];
+        break;
+      case 'Appointment Analytics':
+        summaryLines = [
+          'Total Appointments: ${data['totalAppointments']}',
+          'Monthly Appointments: ${data['monthlyAppointments']}',
+          'Completed: ${data['completedAppointments']}',
+          'Total Revenue: \$${data['totalRevenue'].toStringAsFixed(2)}',
+          'Report Period: ${data['reportPeriod']}',
+        ];
+        break;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('$title Summary'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Report generated with real provider data:'),
+            const SizedBox(height: 12),
+            ...summaryLines.map((line) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Text(line),
+            )),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLoadingDialog(String title, String message) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -603,20 +833,37 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
             const CircularProgressIndicator(),
             const SizedBox(height: 16),
             Text(message),
+            const SizedBox(height: 8),
+            Text(
+              'Using real data from PatientProvider and DoctorProvider...',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppTheme.textSecondary,
+              ),
+            ),
           ],
         ),
       ),
     );
+  }
 
-    // Simulate report generation
-    Future.delayed(const Duration(seconds: 3), () {
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('✅ $title generated successfully!'),
-          backgroundColor: AppTheme.successColor,
-        ),
-      );
-    });
+  void _showSuccessSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('✅ $message'),
+        backgroundColor: AppTheme.successColor,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  void _showErrorSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('❌ $message'),
+        backgroundColor: AppTheme.errorColor,
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 }

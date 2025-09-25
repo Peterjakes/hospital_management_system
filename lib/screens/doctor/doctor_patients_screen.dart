@@ -181,16 +181,7 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
                 ],
               ),
             ),
-            const PopupMenuItem(
-              value: 'appointments',
-              child: Row(
-                children: [
-                  Icon(Icons.calendar_today, size: 16),
-                  SizedBox(width: 8),
-                  Text('Appointments'),
-                ],
-              ),
-            ),
+            
           ],
           onSelected: (value) {
             _handlePatientAction(patient, value.toString());
@@ -210,7 +201,7 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
         _showMedicalHistory(patient);
         break;
       case 'appointments':
-        _showPatientAppointments(patient);
+        
         break;
     }
   }
@@ -286,15 +277,7 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
     );
   }
 
-  void _showPatientAppointments(patient) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Patient appointments view coming soon!'),
-        backgroundColor: AppTheme.warningColor,
-      ),
-    );
-  }
-
+  
   Widget _buildDetailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
