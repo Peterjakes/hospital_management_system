@@ -223,7 +223,7 @@ class AppointmentProvider with ChangeNotifier {
       
       // Add to ALL relevant local state lists
       _appointments.add(finalAppointment);
-      _patientAppointments.add(finalAppointment); // CRITICAL FIX: Add to patient appointments
+      _patientAppointments.add(finalAppointment); 
       
       // Update status
       _isPaymentPolling = false;

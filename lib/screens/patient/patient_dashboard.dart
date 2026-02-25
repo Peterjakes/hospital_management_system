@@ -498,7 +498,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
   }
 
   Widget _buildModernAppointmentPreviewCard(Appointment appointment) {
-  // Get the status color - you need to implement this method in AppTheme
+
   Color statusColor = _getStatusColor(appointment.status);
   
   return Container(
@@ -566,7 +566,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
-            appointment.status.displayName, // ✅ This should work now
+            appointment.status.displayName, 
             style: TextStyle(
               color: Colors.white,
               fontSize: 10,
@@ -579,7 +579,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
   );
 }
 
-// Add this helper method to your _PatientDashboardState class
+// helper method  
 Color _getStatusColor(AppointmentStatus status) {
   switch (status) {
     case AppointmentStatus.scheduled:

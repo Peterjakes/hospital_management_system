@@ -8,7 +8,6 @@ enum UserRole {
 }
 
 /// Extension to convert UserRole enum to string and vice versa
-/// dart does not support methods in enums directly
 extension UserRoleExtension on UserRole {
   /// Convert enum to string for database storage
   String get value {
@@ -61,7 +60,6 @@ class User {
   String get fullName => '$firstName $lastName';
 
   /// Create User instance from Firestore document
-  /// data serialization
   factory User.fromDocument(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     
