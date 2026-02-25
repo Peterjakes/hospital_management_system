@@ -147,7 +147,7 @@ lib/
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/yourusername/hospital_management_system.git
+git clone https://github.com/Peterjakes/hospital_management_system.git
 cd hospital_management_system
 ```
 
