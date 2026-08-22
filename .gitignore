@@ -52,3 +52,7 @@ app.*.map.json
 .env
 .env.*
 !.env.example
+
+# Node (stray package.json — not part of the Flutter app)
+node_modules/
+package-lock.json
