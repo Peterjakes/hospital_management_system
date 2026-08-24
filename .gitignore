@@ -43,3 +43,16 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+
+# Firebase
+.firebase/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Node (stray package.json — not part of the Flutter app)
+node_modules/
+package-lock.json
