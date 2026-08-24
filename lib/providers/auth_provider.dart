@@ -6,8 +6,18 @@ import 'package:hospital_management_system/services/auth_service.dart';
 
 /// Authentication provider managing user authentication state
 class AuthProvider with ChangeNotifier {
-  final AuthService _authService = AuthService();
+  final AuthService _authService;
 
+  /// Accepts an AuthService instance instead of creating one internally.
+  /// Defaults to a real AuthService() so every existing call site in the
+  /// app (e.g. `AuthProvider()`) keeps working exactly as before.
+  ///
+  /// In tests, a fake/mock AuthService can be passed in instead, so tests
+  /// never touch real Firebase servers:
+  ///   AuthProvider(authService: MockAuthService())
+  AuthProvider({AuthService? authService})
+      : _authService = authService ?? AuthService();
+      
   // Authentication state variables
   User? _currentFirebaseUser;
   Map<String, dynamic>? _currentUserData;
