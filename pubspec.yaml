@@ -66,6 +66,12 @@ dev_dependencies:
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
+ # Added for testing: fake_cloud_firestore lets us create realistic fake
+  # Firestore documents/snapshots in tests without touching a real Firebase
+  # project. mocktail lets us mock services like AuthService for provider tests.
+  fake_cloud_firestore: ^4.1.0+1
+  mocktail: ^1.0.4
+
 # The following section is specific to Flutter packages.
 flutter:
 
