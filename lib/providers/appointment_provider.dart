@@ -6,7 +6,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Appointment provider managing appointment-related state and operations
 class AppointmentProvider with ChangeNotifier {
-  final FirestoreService _firestoreService = FirestoreService();
+  final FirestoreService _firestoreService;
+
+  /// Accepts a FirestoreService instance instead of creating one internally.
+  /// Defaults to a real FirestoreService() so existing call sites (e.g.
+  /// `AppointmentProvider()`) keep working exactly as before.
+  ///
+  /// MpesaService is NOT injected here — its methods are static
+ 
+  AppointmentProvider({FirestoreService? firestoreService})
+      : _firestoreService = firestoreService ?? FirestoreService();
 
   // State variables
   List<Appointment> _appointments = [];
