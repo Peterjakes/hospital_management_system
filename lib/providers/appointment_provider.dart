@@ -6,7 +6,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Appointment provider managing appointment-related state and operations
 class AppointmentProvider with ChangeNotifier {
-  final FirestoreService _firestoreService = FirestoreService();
+  final FirestoreService _firestoreService;
+
+  /// Accepts a FirestoreService instance instead of creating one internally.
+  /// Defaults to a real FirestoreService() so existing call sites (e.g.
+  /// `AppointmentProvider()`) keep working exactly as before.
+  ///
+  /// MpesaService is NOT injected here — its methods are static
+ 
+  AppointmentProvider({FirestoreService? firestoreService})
+      : _firestoreService = firestoreService ?? FirestoreService();
 
   // State variables
   List<Appointment> _appointments = [];
@@ -29,8 +38,17 @@ class AppointmentProvider with ChangeNotifier {
   String? get paymentStatus => _paymentStatus;
 
   // Get upcoming appointments
+  //
+  // BUGFIX: this previously read from `_appointments`, which is only ever
+  // populated at the moment of a fresh booking (see _saveBookingAfterPayment)
+  // and is never filled by loadPatientAppointments(). That meant a patient's
+  // upcoming appointment card on the dashboard showed empty on every normal
+  // app launch, even when they had real upcoming appointments — it only
+  // "worked" if they'd just booked something in that same session.
+  // `_patientAppointments` is the list that's actually kept in sync by both
+  // loading and booking, so that's the correct source here.
   List<Appointment> get upcomingAppointments {
-    return _appointments.where((appointment) => appointment.isUpcoming).toList();
+    return _patientAppointments.where((appointment) => appointment.isUpcoming).toList();
   }
 
   // Helper method to get day of week
