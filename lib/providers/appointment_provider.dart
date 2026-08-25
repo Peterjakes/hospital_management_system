@@ -38,8 +38,17 @@ class AppointmentProvider with ChangeNotifier {
   String? get paymentStatus => _paymentStatus;
 
   // Get upcoming appointments
+  //
+  // BUGFIX: this previously read from `_appointments`, which is only ever
+  // populated at the moment of a fresh booking (see _saveBookingAfterPayment)
+  // and is never filled by loadPatientAppointments(). That meant a patient's
+  // upcoming appointment card on the dashboard showed empty on every normal
+  // app launch, even when they had real upcoming appointments — it only
+  // "worked" if they'd just booked something in that same session.
+  // `_patientAppointments` is the list that's actually kept in sync by both
+  // loading and booking, so that's the correct source here.
   List<Appointment> get upcomingAppointments {
-    return _appointments.where((appointment) => appointment.isUpcoming).toList();
+    return _patientAppointments.where((appointment) => appointment.isUpcoming).toList();
   }
 
   // Helper method to get day of week

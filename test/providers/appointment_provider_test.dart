@@ -243,7 +243,9 @@ void main() {
   });
 
   group('AppointmentProvider.upcomingAppointments', () {
-    test('filters to only appointments where isUpcoming is true', () async {
+    test(
+      'includes a loaded future appointment and excludes a past one',
+      () async {
       final future = DateTime.now().add(const Duration(days: 2));
       final past = DateTime.now().subtract(const Duration(days: 2));
 
@@ -284,11 +286,13 @@ void main() {
           )).thenAnswer((_) async => [upcoming, pastAppointment]);
 
       await appointmentProvider.loadPatientAppointments('p1');
-      // Note: upcomingAppointments filters `_appointments`, not
-      // `_patientAppointments` — loadPatientAppointments only populates
-      // the latter, so this documents that upcomingAppointments is
-      // currently driven by a separate, general appointments list.
-      expect(appointmentProvider.upcomingAppointments, isEmpty);
+      // upcomingAppointments now correctly sources from
+      // _patientAppointments (see the bugfix in appointment_provider.dart),
+      // so a loaded, future-dated appointment shows up here immediately —
+      // this was previously broken because it read from a different,
+      // never-populated-on-load list.
+      expect(appointmentProvider.upcomingAppointments.length, 1);
+      expect(appointmentProvider.upcomingAppointments.first.id, 'upcoming1');
       expect(appointmentProvider.patientAppointments.length, 2);
     });
   });
