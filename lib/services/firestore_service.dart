@@ -28,6 +28,48 @@ class FirestoreService {
     }
   }
 
+  /// DEPARTMENT OPERATIONS ///
+
+  // Get all departments from Firestore
+  Future<List<Department>> getAllDepartments() async {
+    try {
+      final snapshot = await _departmentsCollection.orderBy('name').get();
+      return snapshot.docs
+          .map((doc) => Department.fromDocument(doc))
+          .toList();
+    } catch (e) {
+      throw Exception('Failed to load departments: ${e.toString()}');
+    }
+  }
+
+  // Create a new department. Firestore assigns the document ID, so the
+  // Department passed in doesn't need a real `id` yet — this returns the
+  // newly created Department with its real Firestore-assigned id filled in.
+  Future<Department> createDepartment(Department department) async {
+    try {
+      final docRef = await _departmentsCollection.add(department.toMap());
+      final createdDoc = await docRef.get();
+      return Department.fromDocument(createdDoc);
+    } catch (e) {
+      throw Exception('Failed to create department: ${e.toString()}');
+    }
+  }
+
+  // Update an existing department (edit fields, or toggle isActive)
+  Future<void> updateDepartment(
+    String departmentId,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      await _departmentsCollection.doc(departmentId).update({
+        ...data,
+        'updatedAt': Timestamp.fromDate(DateTime.now()),
+      });
+    } catch (e) {
+      throw Exception('Failed to update department: ${e.toString()}');
+    }
+  }
+
   // Get user by ID (for role verification)
   Future<Map<String, dynamic>?> getUserById(String userId) async {
     try {

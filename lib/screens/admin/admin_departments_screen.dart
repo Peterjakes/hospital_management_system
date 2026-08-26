@@ -1,7 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:hospital_management_system/const/app_theme.dart';
+import 'package:hospital_management_system/models/department_model.dart';
+import 'package:hospital_management_system/models/doctor_model.dart';
+import 'package:hospital_management_system/services/firestore_service.dart';
 
 /// Admin departments management screen
+///
+/// Previously this screen used a hardcoded, in-memory list of fake
+/// departments (fake US phone numbers, fake doctor names not tied to any
+/// real doctor in the app) — nothing here ever touched Firestore, so every
+/// edit vanished on app restart and "Manage Doctors" was a dead-end dialog.
+/// This version loads real departments from the `departments` collection,
+/// persists edits/creates/activation-toggles back to Firestore, and shows
+/// the department's actual doctors via getDoctorsByDepartment().
 class AdminDepartmentsScreen extends StatefulWidget {
   const AdminDepartmentsScreen({super.key});
 
@@ -10,109 +21,158 @@ class AdminDepartmentsScreen extends StatefulWidget {
 }
 
 class _AdminDepartmentsScreenState extends State<AdminDepartmentsScreen> {
-  final List<Map<String, dynamic>> _departments = [
-    {
-      'name': 'Cardiology',
-      'head': 'Dr. Sarah Johnson',
-      'doctors': 5,
-      'location': 'Floor 2, Wing A',
-      'phone': '+1 (555) 123-4567',
-      'services': ['Heart Surgery', 'ECG', 'Cardiac Catheterization'],
-      'isActive': true,
-    },
-    {
-      'name': 'Neurology',
-      'head': 'Dr. Michael Chen',
-      'doctors': 3,
-      'location': 'Floor 3, Wing B',
-      'phone': '+1 (555) 234-5678',
-      'services': ['Brain Surgery', 'EEG', 'Neurological Consultation'],
-      'isActive': true,
-    },
-    {
-      'name': 'Pediatrics',
-      'head': 'Dr. Emily Davis',
-      'doctors': 4,
-      'location': 'Floor 1, Wing C',
-      'phone': '+1 (555) 345-6789',
-      'services': ['Child Care', 'Vaccination', 'Growth Monitoring'],
-      'isActive': true,
-    },
-    {
-      'name': 'Orthopedics',
-      'head': 'Dr. Robert Wilson',
-      'doctors': 6,
-      'location': 'Floor 2, Wing C',
-      'phone': '+1 (555) 456-7890',
-      'services': ['Bone Surgery', 'Joint Replacement', 'Sports Medicine'],
-      'isActive': true,
-    },
-    {
-      'name': 'Emergency Medicine',
-      'head': 'Dr. Lisa Anderson',
-      'doctors': 8,
-      'location': 'Ground Floor',
-      'phone': '+1 (555) 567-8901',
-      'services': ['Emergency Care', 'Trauma Treatment', '24/7 Service'],
-      'isActive': true,
-    },
-  ];
+  final FirestoreService _firestoreService = FirestoreService();
+
+  List<Department> _departments = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDepartments();
+  }
+
+  Future<void> _loadDepartments() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final departments = await _firestoreService.getAllDepartments();
+      setState(() {
+        _departments = departments;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Department Management',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
+    return RefreshIndicator(
+      onRefresh: _loadDepartments,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Department Management',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  Text(
-                    'Manage hospital departments and their information',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.textSecondary,
+                    Text(
+                      'Manage hospital departments and their information',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              ElevatedButton.icon(
-                onPressed: _showAddDepartmentDialog,
-                icon: const Icon(Icons.add),
-                label: const Text('Add Department'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.adminColor,
+                  ],
                 ),
-              ),
+                ElevatedButton.icon(
+                  onPressed: _showAddDepartmentDialog,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Department'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.adminColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            if (_isLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 48),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_errorMessage != null)
+              _buildErrorState()
+            else if (_departments.isEmpty)
+              _buildEmptyState()
+            else ...[
+              _buildDepartmentStats(),
+              const SizedBox(height: 24),
+              _buildDepartmentsGrid(),
             ],
-          ),
-          const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
 
-          // Department Statistics
-          _buildDepartmentStats(),
-          const SizedBox(height: 24),
+  Widget _buildErrorState() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 48),
+      child: Center(
+        child: Column(
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: AppTheme.errorColor),
+            const SizedBox(height: 12),
+            Text(
+              'Unable to load departments.',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _errorMessage!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppTheme.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadDepartments,
+              child: const Text('Try Again'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-          // Departments Grid
-          _buildDepartmentsGrid(),
-        ],
+  Widget _buildEmptyState() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 48),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(Icons.business_outlined, size: 48, color: AppTheme.textSecondary),
+            const SizedBox(height: 12),
+            Text(
+              'No departments yet',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Add your first department to get started.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildDepartmentStats() {
     final totalDepartments = _departments.length;
-    final activeDepartments = _departments.where((d) => d['isActive']).length;
-    final totalDoctors = _departments.fold<int>(0, (sum, d) => sum + (d['doctors'] as int));
+    final activeDepartments = _departments.where((d) => d.isActive).length;
 
     return Row(
       children: [
@@ -131,15 +191,6 @@ class _AdminDepartmentsScreenState extends State<AdminDepartmentsScreen> {
             activeDepartments.toString(),
             Icons.check_circle,
             AppTheme.successColor,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatCard(
-            'Total Doctors',
-            totalDoctors.toString(),
-            Icons.medical_services,
-            AppTheme.doctorColor,
           ),
         ),
       ],
@@ -186,25 +237,24 @@ class _AdminDepartmentsScreenState extends State<AdminDepartmentsScreen> {
       ),
       itemCount: _departments.length,
       itemBuilder: (context, index) {
-        return _buildDepartmentCard(_departments[index], index);
+        return _buildDepartmentCard(_departments[index]);
       },
     );
   }
 
-  Widget _buildDepartmentCard(Map<String, dynamic> department, int index) {
+  Widget _buildDepartmentCard(Department department) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header with status
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
                   child: Text(
-                    department['name'],
+                    department.name,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -233,88 +283,58 @@ class _AdminDepartmentsScreenState extends State<AdminDepartmentsScreen> {
                       ),
                     ),
                     PopupMenuItem(
-                      value: department['isActive'] ? 'deactivate' : 'activate',
+                      value: department.isActive ? 'deactivate' : 'activate',
                       child: Row(
                         children: [
                           Icon(
-                            department['isActive'] ? Icons.block : Icons.check_circle,
+                            department.isActive ? Icons.block : Icons.check_circle,
                             size: 16,
-                            color: department['isActive'] ? Colors.red : Colors.green,
+                            color: department.isActive ? Colors.red : Colors.green,
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            department['isActive'] ? 'Deactivate' : 'Activate',
-                            style: TextStyle(
-                              color: department['isActive'] ? Colors.red : Colors.green,
-                            ),
-                          ),
+                          Text(department.isActive ? 'Deactivate' : 'Activate'),
                         ],
                       ),
                     ),
                   ],
-                  onSelected: (value) {
-                    _handleDepartmentAction(department, value.toString(), index);
-                  },
+                  onSelected: (value) => _handleDepartmentAction(department, value),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-
-            // Status indicator
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: department['isActive'] ? AppTheme.successColor : AppTheme.errorColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                department['isActive'] ? 'Active' : 'Inactive',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+            if (!department.isActive)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'Inactive',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.errorColor,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-            ),
             const SizedBox(height: 12),
-
-            // Department info
-            _buildInfoRow(Icons.person, 'Head: ${department['head']}'),
-            _buildInfoRow(Icons.people, '${department['doctors']} Doctors'),
-            _buildInfoRow(Icons.location_on, department['location']),
-            _buildInfoRow(Icons.phone, department['phone']),
-            
-            const SizedBox(height: 8),
-            
-            // Services
-            Text(
-              'Services:',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Wrap(
-              spacing: 4,
-              runSpacing: 4,
-              children: (department['services'] as List<String>).map((service) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    service,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: AppTheme.primaryColor,
-                      fontWeight: FontWeight.w500,
+            _buildInfoRow(Icons.location_on_outlined, department.location),
+            if (department.contactNumber.isNotEmpty)
+              _buildInfoRow(Icons.phone_outlined, department.contactNumber),
+            if (department.headDoctorId.isNotEmpty)
+              _buildInfoRow(Icons.person_outline, 'Head: ${department.headDoctorId}'),
+            if (department.services.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: department.services.map((service) {
+                  return Chip(
+                    label: Text(
+                      service,
+                      style: const TextStyle(fontSize: 11),
                     ),
-                  ),
-                );
-              }).toList(),
-            ),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                  );
+                }).toList(),
+              ),
+            ],
           ],
         ),
       ),
@@ -340,17 +360,17 @@ class _AdminDepartmentsScreenState extends State<AdminDepartmentsScreen> {
     );
   }
 
-  void _handleDepartmentAction(Map<String, dynamic> department, String action, int index) {
+  void _handleDepartmentAction(Department department, String action) {
     switch (action) {
       case 'edit':
-        _showEditDepartmentDialog(department, index);
+        _showEditDepartmentDialog(department);
         break;
       case 'doctors':
         _showDepartmentDoctors(department);
         break;
       case 'activate':
       case 'deactivate':
-        _toggleDepartmentStatus(department, index);
+        _toggleDepartmentStatus(department);
         break;
     }
   }
@@ -360,175 +380,263 @@ class _AdminDepartmentsScreenState extends State<AdminDepartmentsScreen> {
     final headController = TextEditingController();
     final locationController = TextEditingController();
     final phoneController = TextEditingController();
+    bool isSaving = false;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add New Department'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Department Name',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: headController,
-                decoration: const InputDecoration(
-                  labelText: 'Department Head',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: locationController,
-                decoration: const InputDecoration(
-                  labelText: 'Location',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: phoneController,
-                decoration: const InputDecoration(
-                  labelText: 'Phone Number',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (nameController.text.isNotEmpty) {
-                setState(() {
-                  _departments.add({
-                    'name': nameController.text,
-                    'head': headController.text,
-                    'doctors': 0,
-                    'location': locationController.text,
-                    'phone': phoneController.text,
-                    'services': <String>[],
-                    'isActive': true,
-                  });
-                });
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Department added successfully!'),
-                    backgroundColor: AppTheme.successColor,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Add New Department'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Department Name',
+                    border: OutlineInputBorder(),
                   ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: headController,
+                  decoration: const InputDecoration(
+                    labelText: 'Department Head',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: locationController,
+                  decoration: const InputDecoration(
+                    labelText: 'Location',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: phoneController,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone Number',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSaving ? null : () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      if (nameController.text.trim().isEmpty) return;
+
+                      setDialogState(() => isSaving = true);
+
+                      final now = DateTime.now();
+                      final newDepartment = Department(
+                        id: '',
+                        name: nameController.text.trim(),
+                        description: '',
+                        headDoctorId: headController.text.trim(),
+                        location: locationController.text.trim(),
+                        contactNumber: phoneController.text.trim(),
+                        email: '',
+                        isActive: true,
+                        createdAt: now,
+                        updatedAt: now,
+                      );
+
+                      try {
+                        await _firestoreService.createDepartment(newDepartment);
+                        if (!context.mounted) return;
+                        Navigator.of(context).pop();
+                        await _loadDepartments();
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Department added successfully!'),
+                            backgroundColor: AppTheme.successColor,
+                          ),
+                        );
+                      } catch (e) {
+                        setDialogState(() => isSaving = false);
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Failed to add department: ${e.toString()}'),
+                            backgroundColor: AppTheme.errorColor,
+                          ),
+                        );
+                      }
+                    },
+              child: isSaving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Add'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditDepartmentDialog(Department department) {
+    final nameController = TextEditingController(text: department.name);
+    final headController = TextEditingController(text: department.headDoctorId);
+    final locationController = TextEditingController(text: department.location);
+    final phoneController = TextEditingController(text: department.contactNumber);
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Edit Department'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Department Name',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: headController,
+                  decoration: const InputDecoration(
+                    labelText: 'Department Head',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: locationController,
+                  decoration: const InputDecoration(
+                    labelText: 'Location',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: phoneController,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone Number',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSaving ? null : () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      setDialogState(() => isSaving = true);
+
+                      try {
+                        await _firestoreService.updateDepartment(department.id, {
+                          'name': nameController.text.trim(),
+                          'headDoctorId': headController.text.trim(),
+                          'location': locationController.text.trim(),
+                          'contactNumber': phoneController.text.trim(),
+                        });
+                        if (!context.mounted) return;
+                        Navigator.of(context).pop();
+                        await _loadDepartments();
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Department updated successfully!'),
+                            backgroundColor: AppTheme.successColor,
+                          ),
+                        );
+                      } catch (e) {
+                        setDialogState(() => isSaving = false);
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Failed to update department: ${e.toString()}'),
+                            backgroundColor: AppTheme.errorColor,
+                          ),
+                        );
+                      }
+                    },
+              child: isSaving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDepartmentDoctors(Department department) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('${department.name} - Doctors'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: FutureBuilder<List<Doctor>>(
+            future: _firestoreService.getDoctorsByDepartment(department.id),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: CircularProgressIndicator()),
                 );
               }
-            },
-            child: const Text('Add'),
-          ),
-        ],
-      ),
-    );
-  }
 
-  void _showEditDepartmentDialog(Map<String, dynamic> department, int index) {
-    final nameController = TextEditingController(text: department['name']);
-    final headController = TextEditingController(text: department['head']);
-    final locationController = TextEditingController(text: department['location']);
-    final phoneController = TextEditingController(text: department['phone']);
+              if (snapshot.hasError) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Text('Unable to load doctors: ${snapshot.error}'),
+                );
+              }
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Department'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Department Name',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: headController,
-                decoration: const InputDecoration(
-                  labelText: 'Department Head',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: locationController,
-                decoration: const InputDecoration(
-                  labelText: 'Location',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: phoneController,
-                decoration: const InputDecoration(
-                  labelText: 'Phone Number',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _departments[index] = {
-                  ..._departments[index],
-                  'name': nameController.text,
-                  'head': headController.text,
-                  'location': locationController.text,
-                  'phone': phoneController.text,
-                };
-              });
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Department updated successfully!'),
-                  backgroundColor: AppTheme.successColor,
-                ),
+              final doctors = snapshot.data ?? [];
+
+              if (doctors.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Text('No doctors are currently assigned to this department.'),
+                );
+              }
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: doctors.map((doctor) {
+                  return ListTile(
+                    leading: const CircleAvatar(child: Icon(Icons.person)),
+                    title: Text(doctor.fullName),
+                    subtitle: Text(doctor.specialization),
+                  );
+                }).toList(),
               );
             },
-            child: const Text('Save'),
           ),
-        ],
-      ),
-    );
-  }
-
-  void _showDepartmentDoctors(Map<String, dynamic> department) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('${department['name']} - Doctors'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Total Doctors: ${department['doctors']}'),
-            const SizedBox(height: 16),
-            const Text('Doctor management feature coming soon!'),
-          ],
         ),
         actions: [
           TextButton(
@@ -540,18 +648,29 @@ class _AdminDepartmentsScreenState extends State<AdminDepartmentsScreen> {
     );
   }
 
-  void _toggleDepartmentStatus(Map<String, dynamic> department, int index) {
-    setState(() {
-      _departments[index]['isActive'] = !_departments[index]['isActive'];
-    });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Department ${_departments[index]['isActive'] ? 'activated' : 'deactivated'} successfully!',
+  Future<void> _toggleDepartmentStatus(Department department) async {
+    try {
+      await _firestoreService.updateDepartment(department.id, {
+        'isActive': !department.isActive,
+      });
+      await _loadDepartments();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Department ${!department.isActive ? 'activated' : 'deactivated'} successfully!',
+          ),
+          backgroundColor: AppTheme.successColor,
         ),
-        backgroundColor: AppTheme.successColor,
-      ),
-    );
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update department: ${e.toString()}'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+    }
   }
 }

@@ -320,6 +320,8 @@ class DoctorProvider with ChangeNotifier {
     String? biography,
     String? profileImageUrl,
     double? consultationFee,
+    String? departmentId,
+    String? specialization,
   }) async {
     _setLoading(true);
     _clearError();
@@ -333,6 +335,8 @@ class DoctorProvider with ChangeNotifier {
       if (biography != null) updateData['biography'] = biography;
       if (profileImageUrl != null) updateData['profileImageUrl'] = profileImageUrl;
       if (consultationFee != null) updateData['consultationFee'] = consultationFee;
+      if (departmentId != null) updateData['departmentId'] = departmentId;
+      if (specialization != null) updateData['specialization'] = specialization;
 
       await _firestoreService.updateDoctor(doctorId, updateData);
 
@@ -502,25 +506,53 @@ class DoctorProvider with ChangeNotifier {
 
   /// Update local doctor in state
   /// Helper method to update doctor in local lists
+  /// Applies a Firestore update map to the in-memory Doctor objects.
+  ///
+  /// BUGFIX: this previously only called notifyListeners() without
+  /// actually changing any Doctor object (see the old comment: "In a real
+  /// implementation, you would properly update the doctor object. For now,
+  /// we'll just trigger a refresh"). That meant every successful profile
+  /// update — consultation fee, biography, availability, schedule, and now
+  /// department/specialization — showed a "success" message while the UI
+  /// kept displaying stale data until the app fully reloaded that doctor
+  /// from Firestore elsewhere.
   void _updateLocalDoctor(String doctorId, Map<String, dynamic> updates) {
+    Doctor applyUpdates(Doctor doctor) {
+      return doctor.copyWith(
+        firstName: updates['firstName'] as String?,
+        lastName: updates['lastName'] as String?,
+        phoneNumber: updates['phoneNumber'] as String?,
+        biography: updates['biography'] as String?,
+        profileImageUrl: updates['profileImageUrl'] as String?,
+        consultationFee: (updates['consultationFee'] as num?)?.toDouble(),
+        departmentId: updates['departmentId'] as String?,
+        specialization: updates['specialization'] as String?,
+        isAvailable: updates['isAvailable'] as bool?,
+        availableDays: (updates['availableDays'] as List?)?.cast<String>(),
+        startTime: updates['startTime'] as String?,
+        endTime: updates['endTime'] as String?,
+        consultationDuration: updates['consultationDuration'] as int?,
+      );
+    }
+
     // Update in main doctors list
     final doctorIndex = _doctors.indexWhere((d) => d.id == doctorId);
     if (doctorIndex != -1) {
-      // In a real implementation, you would properly update the doctor object
-      // For now, we'll just trigger a refresh
-      notifyListeners();
+      _doctors[doctorIndex] = applyUpdates(_doctors[doctorIndex]);
     }
 
     // Update in filtered doctors list
     final filteredIndex = _filteredDoctors.indexWhere((d) => d.id == doctorId);
     if (filteredIndex != -1) {
-      notifyListeners();
+      _filteredDoctors[filteredIndex] = applyUpdates(_filteredDoctors[filteredIndex]);
     }
 
     // Update selected doctor
     if (_selectedDoctor?.id == doctorId) {
-      notifyListeners();
+      _selectedDoctor = applyUpdates(_selectedDoctor!);
     }
+
+    notifyListeners();
   }
 
   /// Set loading state
