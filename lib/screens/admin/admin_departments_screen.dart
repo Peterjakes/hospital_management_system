@@ -297,7 +297,7 @@ class _AdminDepartmentsScreenState extends State<AdminDepartmentsScreen> {
                       ),
                     ),
                   ],
-                  onSelected: (value) => _handleDepartmentAction(department, value as String),
+                  onSelected: (value) => _handleDepartmentAction(department, value),
                 ),
               ],
             ),
