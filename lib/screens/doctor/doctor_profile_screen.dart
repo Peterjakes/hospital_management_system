@@ -7,6 +7,8 @@ import 'package:hospital_management_system/providers/doctor_provider.dart';
 import 'package:hospital_management_system/widgets/custom_text_field.dart';
 import 'package:hospital_management_system/widgets/custom_button.dart';
 import 'package:hospital_management_system/services/image_service.dart';
+import 'package:hospital_management_system/models/department_model.dart';
+import 'package:hospital_management_system/services/firestore_service.dart';
 
 /// Doctor profile screen with edit functionality
 class DoctorProfileScreen extends StatefulWidget {
@@ -23,12 +25,23 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
   final _phoneController = TextEditingController();
   final _biographyController = TextEditingController();
   final _consultationFeeController = TextEditingController();
+  final _specializationController = TextEditingController();
+  final FirestoreService _firestoreService = FirestoreService();
 
   bool _isEditing = false;
   bool _isUploadingImage = false;
   List<String> _selectedDays = [];
   String _startTime = '09:00';
   String _endTime = '17:00';
+
+  // Department picker state. Previously there was no way anywhere in the
+  // app — admin or doctor-facing — to set a doctor's departmentId, which
+  // meant Admin > Departments > Manage Doctors could never show any real
+  // doctors for a department. This lets a doctor self-assign their
+  // department, same as they already self-edit other profile fields here.
+  List<Department> _departments = [];
+  String? _selectedDepartmentId;
+  bool _isLoadingDepartments = true;
 
   @override
   void initState() {
@@ -41,6 +54,21 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
         doctorProvider.getDoctor(authProvider.currentUserId!);
       }
     });
+    _loadDepartments();
+  }
+
+  Future<void> _loadDepartments() async {
+    try {
+      final departments = await _firestoreService.getAllDepartments();
+      if (!mounted) return;
+      setState(() {
+        _departments = departments;
+        _isLoadingDepartments = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoadingDepartments = false);
+    }
   }
 
   @override
@@ -50,6 +78,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     _phoneController.dispose();
     _biographyController.dispose();
     _consultationFeeController.dispose();
+    _specializationController.dispose();
     super.dispose();
   }
 
@@ -60,6 +89,10 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
       _phoneController.text = doctor.phoneNumber;
       _biographyController.text = doctor.biography ?? '';
       _consultationFeeController.text = doctor.consultationFee.toString();
+      _specializationController.text = doctor.specialization;
+      _selectedDepartmentId = (doctor.departmentId as String).isEmpty
+          ? null
+          : doctor.departmentId as String;
       _selectedDays = List<String>.from(doctor.availableDays);
       _startTime = doctor.startTime;
       _endTime = doctor.endTime;
@@ -418,7 +451,46 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            _buildInfoRow('Specialization', doctor.specialization),
+            if (_isEditing) ...[
+              CustomTextField(
+                controller: _specializationController,
+                labelText: 'Specialization',
+                hintText: 'e.g. Cardiology, Pediatrics',
+              ),
+              const SizedBox(height: 12),
+              _isLoadingDepartments
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: LinearProgressIndicator(),
+                    )
+                  : DropdownButtonFormField<String>(
+                      value: _departments.any((d) => d.id == _selectedDepartmentId)
+                          ? _selectedDepartmentId
+                          : null,
+                      decoration: const InputDecoration(
+                        labelText: 'Department',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _departments
+                          .map((dept) => DropdownMenuItem(
+                                value: dept.id,
+                                child: Text(dept.name),
+                              ))
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() => _selectedDepartmentId = value);
+                      },
+                      hint: _departments.isEmpty
+                          ? const Text('No departments available yet')
+                          : const Text('Select a department'),
+                    ),
+              const SizedBox(height: 12),
+            ] else ...[
+              _buildInfoRow('Specialization', doctor.specialization.isEmpty
+                  ? 'Not set'
+                  : doctor.specialization),
+              _buildInfoRow('Department', _departmentNameFor(doctor.departmentId)),
+            ],
             _buildInfoRow('Qualification', doctor.qualification),
             _buildInfoRow('License Number', doctor.licenseNumber),
             _buildInfoRow('Experience', '${doctor.experienceYears} years'),
@@ -428,6 +500,15 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
         ),
       ),
     );
+  }
+
+  // Looks up a department's display name from the already-loaded list,
+  // since the doctor record only stores the departmentId, not the name.
+  String _departmentNameFor(String departmentId) {
+    if (departmentId.isEmpty) return 'Not assigned';
+    final match = _departments.where((d) => d.id == departmentId);
+    if (match.isEmpty) return 'Not assigned';
+    return match.first.name;
   }
 
   Widget _buildSectionHeader(String title) {
@@ -560,6 +641,8 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
       phoneNumber: _phoneController.text.trim(),
       biography: _biographyController.text.trim(),
       consultationFee: double.parse(_consultationFeeController.text),
+      specialization: _specializationController.text.trim(),
+      departmentId: _selectedDepartmentId ?? '',
     );
 
     // Update schedule
