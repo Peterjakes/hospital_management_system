@@ -300,12 +300,14 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
   }
 
   void _showPrescriptionDialog(Appointment appointment) {
-    final prescriptionController = TextEditingController();
-    final diagnosisController = TextEditingController();
+    final prescriptionController = TextEditingController(text: appointment.prescription ?? '');
+    final diagnosisController = TextEditingController(text: appointment.diagnosis ?? '');
+    bool isSaving = false;
     
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
         title: const Text('Add Prescription'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -331,23 +333,69 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: isSaving ? null : () => Navigator.of(context).pop(),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              // TODO: Update appointment with prescription
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Prescription added successfully!'),
-                  backgroundColor: AppTheme.successColor,
-                ),
-              );
-            },
-            child: const Text('Save'),
+            onPressed: isSaving
+                ? null
+                : () async {
+                    final diagnosis = diagnosisController.text.trim();
+                    final prescription = prescriptionController.text.trim();
+
+                    if (diagnosis.isEmpty || prescription.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please fill in both diagnosis and prescription'),
+                          backgroundColor: AppTheme.errorColor,
+                        ),
+                      );
+                      return;
+                    }
+
+                    setDialogState(() => isSaving = true);
+
+                    final appointmentProvider =
+                        Provider.of<AppointmentProvider>(context, listen: false);
+                    final success = await appointmentProvider.saveDiagnosisAndPrescription(
+                      appointmentId: appointment.id,
+                      diagnosis: diagnosis,
+                      prescription: prescription,
+                    );
+
+                    if (!context.mounted) return;
+
+                    if (success) {
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Prescription saved successfully!'),
+                          backgroundColor: AppTheme.successColor,
+                        ),
+                      );
+                      _refreshAppointments();
+                    } else {
+                      setDialogState(() => isSaving = false);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            appointmentProvider.errorMessage ?? 'Failed to save prescription',
+                          ),
+                          backgroundColor: AppTheme.errorColor,
+                        ),
+                      );
+                    }
+                  },
+            child: isSaving
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Save'),
           ),
         ],
+        ),
       ),
     );
   }
