@@ -12,8 +12,9 @@ class AppointmentProvider with ChangeNotifier {
   /// Defaults to a real FirestoreService() so existing call sites (e.g.
   /// `AppointmentProvider()`) keep working exactly as before.
   ///
-  /// MpesaService is NOT injected here — its methods are static
- 
+  /// Note: MpesaService is NOT injected here — its methods are static,
+  ///  so we don't need to create an instance. If you ever want to mock MpesaService for testing,
+  ///  i can do that by creating a wrapper service and injecting it here
   AppointmentProvider({FirestoreService? firestoreService})
       : _firestoreService = firestoreService ?? FirestoreService();
 
@@ -664,6 +665,76 @@ class AppointmentProvider with ChangeNotifier {
       _setError('Failed to cancel appointment: ${e.toString()}');
       _setLoading(false);
       return false;
+    }
+  }
+
+  /// Save a doctor's diagnosis and prescription for an appointment.
+  ///
+  /// This closes a real gap: the "Add Prescription" dialog previously
+  /// collected diagnosis/prescription text but never saved it anywhere —
+  /// it just closed and showed a fake success message. That also meant
+  /// the PDF prescription generation flow (doctor_dashboard.dart,
+  /// _pdfService.printPrescription) was always falling back to the
+  /// appointment's original reasonForVisit instead of the doctor's actual
+  /// diagnosis, since `appointment.diagnosis` was never actually set.
+  Future<bool> saveDiagnosisAndPrescription({
+    required String appointmentId,
+    required String diagnosis,
+    required String prescription,
+  }) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      await _firestoreService.updateAppointment(appointmentId, {
+        'diagnosis': diagnosis,
+        'prescription': prescription,
+        'updatedAt': DateTime.now(),
+      });
+
+      _updateLocalAppointmentDiagnosis(appointmentId, diagnosis, prescription);
+
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _setError('Failed to save prescription: ${e.toString()}');
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  /// Helper method to update diagnosis/prescription in local state
+  void _updateLocalAppointmentDiagnosis(
+    String appointmentId,
+    String diagnosis,
+    String prescription,
+  ) {
+    final appointmentIndex = _appointments.indexWhere((a) => a.id == appointmentId);
+    if (appointmentIndex != -1) {
+      _appointments[appointmentIndex] = _appointments[appointmentIndex].copyWith(
+        diagnosis: diagnosis,
+        prescription: prescription,
+        updatedAt: DateTime.now(),
+      );
+    }
+
+    final patientIndex = _patientAppointments.indexWhere((a) => a.id == appointmentId);
+    if (patientIndex != -1) {
+      _patientAppointments[patientIndex] = _patientAppointments[patientIndex].copyWith(
+        diagnosis: diagnosis,
+        prescription: prescription,
+        updatedAt: DateTime.now(),
+      );
+    }
+
+    final doctorIndex = _doctorAppointments.indexWhere((a) => a.id == appointmentId);
+    if (doctorIndex != -1) {
+      _doctorAppointments[doctorIndex] = _doctorAppointments[doctorIndex].copyWith(
+        diagnosis: diagnosis,
+        prescription: prescription,
+        updatedAt: DateTime.now(),
+      );
     }
   }
 
