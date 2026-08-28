@@ -12,9 +12,10 @@ class AppointmentProvider with ChangeNotifier {
   /// Defaults to a real FirestoreService() so existing call sites (e.g.
   /// `AppointmentProvider()`) keep working exactly as before.
   ///
-  /// Note: MpesaService is NOT injected here — its methods are static,
-  ///  so we don't need to create an instance. If you ever want to mock MpesaService for testing,
-  ///  i can do that by creating a wrapper service and injecting it here
+  /// Note: MpesaService is NOT injected here — its methods are static
+  /// (see mpesa_service.dart), which means the payment-booking flow
+  /// (bookAppointmentWithPayment, payment polling) can't be mocked yet.
+  /// That's a separate, larger refactor tracked on its own branch.
   AppointmentProvider({FirestoreService? firestoreService})
       : _firestoreService = firestoreService ?? FirestoreService();
 
@@ -665,6 +666,88 @@ class AppointmentProvider with ChangeNotifier {
       _setError('Failed to cancel appointment: ${e.toString()}');
       _setLoading(false);
       return false;
+    }
+  }
+
+  /// Save vitals recorded during a consultation.
+  ///
+  /// Previously there was no way anywhere in the app to record vitals —
+  /// no screen, no model fields. Vitals are optional per-field: a doctor
+  /// can save just blood pressure, or all five, since not every
+  /// consultation needs every measurement.
+  Future<bool> saveVitals({
+    required String appointmentId,
+    String? bloodPressure,
+    double? temperatureCelsius,
+    int? heartRateBpm,
+    double? weightKg,
+    double? heightCm,
+  }) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final updateData = <String, dynamic>{'updatedAt': DateTime.now()};
+      if (bloodPressure != null) updateData['bloodPressure'] = bloodPressure;
+      if (temperatureCelsius != null) updateData['temperatureCelsius'] = temperatureCelsius;
+      if (heartRateBpm != null) updateData['heartRateBpm'] = heartRateBpm;
+      if (weightKg != null) updateData['weightKg'] = weightKg;
+      if (heightCm != null) updateData['heightCm'] = heightCm;
+
+      await _firestoreService.updateAppointment(appointmentId, updateData);
+
+      _updateLocalAppointmentVitals(
+        appointmentId,
+        bloodPressure: bloodPressure,
+        temperatureCelsius: temperatureCelsius,
+        heartRateBpm: heartRateBpm,
+        weightKg: weightKg,
+        heightCm: heightCm,
+      );
+
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _setError('Failed to save vitals: ${e.toString()}');
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  /// Helper method to update vitals in local state
+  void _updateLocalAppointmentVitals(
+    String appointmentId, {
+    String? bloodPressure,
+    double? temperatureCelsius,
+    int? heartRateBpm,
+    double? weightKg,
+    double? heightCm,
+  }) {
+    Appointment applyVitals(Appointment appointment) {
+      return appointment.copyWith(
+        bloodPressure: bloodPressure,
+        temperatureCelsius: temperatureCelsius,
+        heartRateBpm: heartRateBpm,
+        weightKg: weightKg,
+        heightCm: heightCm,
+        updatedAt: DateTime.now(),
+      );
+    }
+
+    final appointmentIndex = _appointments.indexWhere((a) => a.id == appointmentId);
+    if (appointmentIndex != -1) {
+      _appointments[appointmentIndex] = applyVitals(_appointments[appointmentIndex]);
+    }
+
+    final patientIndex = _patientAppointments.indexWhere((a) => a.id == appointmentId);
+    if (patientIndex != -1) {
+      _patientAppointments[patientIndex] = applyVitals(_patientAppointments[patientIndex]);
+    }
+
+    final doctorIndex = _doctorAppointments.indexWhere((a) => a.id == appointmentId);
+    if (doctorIndex != -1) {
+      _doctorAppointments[doctorIndex] = applyVitals(_doctorAppointments[doctorIndex]);
     }
   }
 

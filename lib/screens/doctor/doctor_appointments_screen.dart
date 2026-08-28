@@ -174,6 +174,16 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
                       ),
                     ),
                     const PopupMenuItem(
+                      value: 'vitals',
+                      child: Row(
+                        children: [
+                          Icon(Icons.monitor_heart_outlined, size: 16),
+                          SizedBox(width: 8),
+                          Text('Record Vitals'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
                       value: 'prescription',
                       child: Row(
                         children: [
@@ -274,6 +284,9 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
       case 'complete':
         _updateAppointmentStatus(appointment, AppointmentStatus.completed);
         break;
+      case 'vitals':
+        _showVitalsDialog(appointment);
+        break;
       case 'prescription':
         _showPrescriptionDialog(appointment);
         break;
@@ -297,6 +310,162 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
       );
       _refreshAppointments();
     }
+  }
+
+  void _showVitalsDialog(Appointment appointment) {
+    final bpController = TextEditingController(text: appointment.bloodPressure ?? '');
+    final tempController = TextEditingController(
+      text: appointment.temperatureCelsius?.toString() ?? '',
+    );
+    final heartRateController = TextEditingController(
+      text: appointment.heartRateBpm?.toString() ?? '',
+    );
+    final weightController = TextEditingController(
+      text: appointment.weightKg?.toString() ?? '',
+    );
+    final heightController = TextEditingController(
+      text: appointment.heightCm?.toString() ?? '',
+    );
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Record Vitals'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: bpController,
+                  decoration: const InputDecoration(
+                    labelText: 'Blood Pressure',
+                    hintText: 'e.g. 120/80',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: tempController,
+                  decoration: const InputDecoration(
+                    labelText: 'Temperature (°C)',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: heartRateController,
+                  decoration: const InputDecoration(
+                    labelText: 'Heart Rate (bpm)',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: weightController,
+                  decoration: const InputDecoration(
+                    labelText: 'Weight (kg)',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: heightController,
+                  decoration: const InputDecoration(
+                    labelText: 'Height (cm)',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSaving ? null : () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      // All fields are optional — a doctor may only record
+                      // what's relevant for this visit. Empty fields are
+                      // simply not sent, not saved as invalid data.
+                      final bp = bpController.text.trim();
+                      final temp = double.tryParse(tempController.text.trim());
+                      final hr = int.tryParse(heartRateController.text.trim());
+                      final weight = double.tryParse(weightController.text.trim());
+                      final height = double.tryParse(heightController.text.trim());
+
+                      final nothingEntered = bp.isEmpty &&
+                          temp == null &&
+                          hr == null &&
+                          weight == null &&
+                          height == null;
+
+                      if (nothingEntered) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Enter at least one vital before saving'),
+                            backgroundColor: AppTheme.errorColor,
+                          ),
+                        );
+                        return;
+                      }
+
+                      setDialogState(() => isSaving = true);
+
+                      final appointmentProvider =
+                          Provider.of<AppointmentProvider>(context, listen: false);
+                      final success = await appointmentProvider.saveVitals(
+                        appointmentId: appointment.id,
+                        bloodPressure: bp.isEmpty ? null : bp,
+                        temperatureCelsius: temp,
+                        heartRateBpm: hr,
+                        weightKg: weight,
+                        heightCm: height,
+                      );
+
+                      if (!context.mounted) return;
+
+                      if (success) {
+                        Navigator.of(context).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Vitals saved successfully!'),
+                            backgroundColor: AppTheme.successColor,
+                          ),
+                        );
+                        _refreshAppointments();
+                      } else {
+                        setDialogState(() => isSaving = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              appointmentProvider.errorMessage ?? 'Failed to save vitals',
+                            ),
+                            backgroundColor: AppTheme.errorColor,
+                          ),
+                        );
+                      }
+                    },
+              child: isSaving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showPrescriptionDialog(Appointment appointment) {

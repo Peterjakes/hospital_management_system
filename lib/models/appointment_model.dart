@@ -132,6 +132,15 @@ class Appointment {
   final String? diagnosis; // Doctor's diagnosis
   final String? prescription; // Prescription details
   final String? prescriptionFileUrl; // PDF file URL
+  // Vitals recorded during consultation. Kept as simple nullable strings
+  // (matching the existing loose-typing style of this model, e.g.
+  // appointmentTime) rather than a nested object, since Firestore reads/
+  // writes and existing null-safety patterns here are all flat fields.
+  final String? bloodPressure; // e.g. "120/80"
+  final double? temperatureCelsius;
+  final int? heartRateBpm;
+  final double? weightKg;
+  final double? heightCm;
   final double consultationFee;
   final bool isPaid; // Kept for backward compatibility
   final PaymentStatus paymentStatus; // New payment status enum
@@ -160,6 +169,11 @@ class Appointment {
     this.diagnosis,
     this.prescription,
     this.prescriptionFileUrl,
+    this.bloodPressure,
+    this.temperatureCelsius,
+    this.heartRateBpm,
+    this.weightKg,
+    this.heightCm,
     required this.consultationFee,
     this.isPaid = false, // Derived from paymentStatus
     this.paymentStatus = PaymentStatus.pending,
@@ -240,6 +254,14 @@ class Appointment {
   // Check if appointment has prescription
   bool get hasPrescription => prescription != null && prescription!.isNotEmpty;
 
+  // Check if any vitals have been recorded for this appointment
+  bool get hasVitals =>
+      bloodPressure != null ||
+      temperatureCelsius != null ||
+      heartRateBpm != null ||
+      weightKg != null ||
+      heightCm != null;
+
   // Check if payment is completed
   bool get isPaymentCompleted => paymentStatus == PaymentStatus.paid;
 
@@ -315,6 +337,11 @@ class Appointment {
       diagnosis: data['diagnosis'],
       prescription: data['prescription'],
       prescriptionFileUrl: data['prescriptionFileUrl'],
+      bloodPressure: data['bloodPressure'],
+      temperatureCelsius: (data['temperatureCelsius'] as num?)?.toDouble(),
+      heartRateBpm: (data['heartRateBpm'] as num?)?.toInt(),
+      weightKg: (data['weightKg'] as num?)?.toDouble(),
+      heightCm: (data['heightCm'] as num?)?.toDouble(),
       consultationFee: (data['consultationFee'] ?? 0.0).toDouble(),
       isPaid: derivedIsPaid,
       paymentStatus: derivedPaymentStatus,
@@ -346,6 +373,11 @@ class Appointment {
       'diagnosis': diagnosis,
       'prescription': prescription,
       'prescriptionFileUrl': prescriptionFileUrl,
+      'bloodPressure': bloodPressure,
+      'temperatureCelsius': temperatureCelsius,
+      'heartRateBpm': heartRateBpm,
+      'weightKg': weightKg,
+      'heightCm': heightCm,
       'consultationFee': consultationFee,
       'isPaid': isPaid,
       'paymentStatus': paymentStatus.value,
@@ -377,6 +409,11 @@ class Appointment {
     String? diagnosis,
     String? prescription,
     String? prescriptionFileUrl,
+    String? bloodPressure,
+    double? temperatureCelsius,
+    int? heartRateBpm,
+    double? weightKg,
+    double? heightCm,
     double? consultationFee,
     bool? isPaid,
     PaymentStatus? paymentStatus,
@@ -408,6 +445,11 @@ class Appointment {
       diagnosis: diagnosis ?? this.diagnosis,
       prescription: prescription ?? this.prescription,
       prescriptionFileUrl: prescriptionFileUrl ?? this.prescriptionFileUrl,
+      bloodPressure: bloodPressure ?? this.bloodPressure,
+      temperatureCelsius: temperatureCelsius ?? this.temperatureCelsius,
+      heartRateBpm: heartRateBpm ?? this.heartRateBpm,
+      weightKg: weightKg ?? this.weightKg,
+      heightCm: heightCm ?? this.heightCm,
       consultationFee: consultationFee ?? this.consultationFee,
       isPaid: newIsPaid,
       paymentStatus: newPaymentStatus,
