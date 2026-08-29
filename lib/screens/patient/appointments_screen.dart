@@ -3,8 +3,11 @@ import 'package:hospital_management_system/const/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:hospital_management_system/providers/appointment_provider.dart';
 import 'package:hospital_management_system/providers/auth_provider.dart';
+import 'package:hospital_management_system/providers/patient_provider.dart';
+import 'package:hospital_management_system/providers/doctor_provider.dart';
 import 'package:hospital_management_system/models/appointment_model.dart';
 import 'package:hospital_management_system/screens/patient/book_appointment_screen.dart';
+import 'package:hospital_management_system/services/pdf_service.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 
 /// Patient appointments screen showing all appointments
@@ -371,9 +374,12 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   }
 
   void _showAppointmentDetails(Appointment appointment) {
+    bool isGeneratingPdf = false;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
         title: const Text('Appointment Details'),
         content: SingleChildScrollView(
           child: Column(
@@ -390,6 +396,55 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                 _buildDetailRow('Payment Reference', appointment.paymentReference!),
               if (appointment.mpesaReceiptNumber != null)
                 _buildDetailRow('M-Pesa Receipt', appointment.mpesaReceiptNumber!),
+
+              // Vitals, diagnosis, and prescription only appear once a
+              // doctor has actually recorded them — previously this dialog
+              // stopped at payment info, so a patient had no way to see
+              // their own visit outcome anywhere in the app.
+              if (appointment.hasVitals) ...[
+                const Divider(height: 24),
+                Text(
+                  'Vitals',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (appointment.bloodPressure != null)
+                  _buildDetailRow('Blood Pressure', appointment.bloodPressure!),
+                if (appointment.temperatureCelsius != null)
+                  _buildDetailRow('Temperature', '${appointment.temperatureCelsius}°C'),
+                if (appointment.heartRateBpm != null)
+                  _buildDetailRow('Heart Rate', '${appointment.heartRateBpm} bpm'),
+                if (appointment.weightKg != null)
+                  _buildDetailRow('Weight', '${appointment.weightKg} kg'),
+                if (appointment.heightCm != null)
+                  _buildDetailRow('Height', '${appointment.heightCm} cm'),
+              ],
+
+              if (appointment.diagnosis != null && appointment.diagnosis!.isNotEmpty) ...[
+                const Divider(height: 24),
+                Text(
+                  'Diagnosis',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(appointment.diagnosis!),
+              ],
+
+              if (appointment.hasPrescription) ...[
+                const Divider(height: 24),
+                Text(
+                  'Prescription',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(appointment.prescription!),
+              ],
             ],
           ),
         ),
@@ -398,9 +453,76 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Close'),
           ),
+          if (appointment.hasPrescription)
+            ElevatedButton.icon(
+              onPressed: isGeneratingPdf
+                  ? null
+                  : () => _downloadPrescription(
+                        appointment,
+                        setDialogState,
+                        (value) => isGeneratingPdf = value,
+                      ),
+              icon: isGeneratingPdf
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.download, size: 16),
+              label: Text(isGeneratingPdf ? 'Preparing...' : 'Download Prescription'),
+            ),
         ],
+        ),
       ),
     );
+  }
+
+  // Generates and opens the prescription PDF for a patient's own completed
+  // appointment. Previously PDF generation only existed on the doctor side
+  // (doctor_dashboard.dart) — a patient had no way to get their own
+  // prescription. Reuses the exact same PDFService.printPrescription() the
+  // doctor side already calls, which opens the native print/share/save
+  // sheet, so no new file-handling code was needed.
+  Future<void> _downloadPrescription(
+    Appointment appointment,
+    void Function(void Function()) setDialogState,
+    void Function(bool) setGenerating,
+  ) async {
+    setDialogState(() => setGenerating(true));
+
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final patientProvider = Provider.of<PatientProvider>(context, listen: false);
+      final doctorProvider = Provider.of<DoctorProvider>(context, listen: false);
+
+      final patient = patientProvider.selectedPatient;
+      if (patient == null) {
+        await patientProvider.getPatient(authProvider.currentUserId!);
+      }
+      final resolvedPatient = patientProvider.selectedPatient;
+      final doctor = await doctorProvider.getDoctor(appointment.doctorId);
+
+      if (resolvedPatient == null || doctor == null) {
+        throw Exception('Unable to load patient or doctor details');
+      }
+
+      final pdfService = PDFService();
+      await pdfService.printPrescription(
+        patient: resolvedPatient,
+        doctor: doctor,
+        appointment: appointment,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to generate prescription: ${e.toString()}'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+    } finally {
+      setDialogState(() => setGenerating(false));
+    }
   }
 
   void _showDebugInfo(Appointment appointment) {
