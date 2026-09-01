@@ -8,6 +8,7 @@ import 'package:hospital_management_system/providers/auth_provider.dart';
 import 'package:hospital_management_system/models/doctor_model.dart';
 import 'package:hospital_management_system/widgets/custom_text_field.dart';
 import 'package:hospital_management_system/widgets/custom_button.dart';
+import 'package:hospital_management_system/services/firestore_service.dart';
 import 'package:hospital_management_system/services/mpesa_service.dart';
 
 class BookAppointmentScreen extends StatefulWidget {
@@ -27,6 +28,8 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   DateTime? _selectedDate;
   String? _selectedTime;
   Doctor? _selectedDoctor;
+  Set<String> _bookedTimeSlots = {};
+  bool _isLoadingBookedSlots = false;
 
   @override
   void initState() {
@@ -536,30 +539,50 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
               ),
             ),
           )
+        else if (_isLoadingBookedSlots)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CircularProgressIndicator()),
+          )
         else
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: availableSlots.map((time) {
               final isSelected = _selectedTime == time;
+              // Previously every generated slot was shown as clickable
+              // regardless of whether it was already booked — a patient
+              // would only find out at submit time. Now already-booked
+              // slots are visibly disabled instead.
+              final isBooked = _bookedTimeSlots.contains(time);
+
               return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedTime = time;
-                  });
-                },
+                onTap: isBooked
+                    ? null
+                    : () {
+                        setState(() {
+                          _selectedTime = time;
+                        });
+                      },
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: isSelected ? AppTheme.primaryColor : Colors.transparent,
-                    border: Border.all(color: AppTheme.primaryColor),
+                    color: isBooked
+                        ? Colors.grey.shade200
+                        : (isSelected ? AppTheme.primaryColor : Colors.transparent),
+                    border: Border.all(
+                      color: isBooked ? Colors.grey.shade400 : AppTheme.primaryColor,
+                    ),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    time,
+                    isBooked ? '$time (Booked)' : time,
                     style: TextStyle(
-                      color: isSelected ? Colors.white : AppTheme.primaryColor,
+                      color: isBooked
+                          ? Colors.grey.shade500
+                          : (isSelected ? Colors.white : AppTheme.primaryColor),
                       fontWeight: FontWeight.w600,
+                      decoration: isBooked ? TextDecoration.lineThrough : null,
                     ),
                   ),
                 ),
@@ -637,6 +660,32 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         _selectedDate = picked;
         _selectedTime = null;
       });
+      _loadBookedTimeSlots();
+    }
+  }
+
+  // Loads already-booked slots for the selected doctor/date, so the time
+  // picker can grey them out instead of letting a patient tap a slot that
+  // will only be rejected after they submit.
+  Future<void> _loadBookedTimeSlots() async {
+    if (_selectedDoctorId == null || _selectedDate == null) return;
+
+    setState(() => _isLoadingBookedSlots = true);
+
+    try {
+      final firestoreService = FirestoreService();
+      final booked = await firestoreService.getBookedTimeSlots(
+        doctorId: _selectedDoctorId!,
+        date: _selectedDate!,
+      );
+      if (!mounted) return;
+      setState(() {
+        _bookedTimeSlots = booked;
+        _isLoadingBookedSlots = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoadingBookedSlots = false);
     }
   }
 
