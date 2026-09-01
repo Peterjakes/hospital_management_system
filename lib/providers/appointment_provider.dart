@@ -13,8 +13,6 @@ class AppointmentProvider with ChangeNotifier {
   /// `AppointmentProvider()`) keep working exactly as before.
   ///
   /// Note: MpesaService is NOT injected here — its methods are static
-  /// (see mpesa_service.dart), which means the payment-booking flow
-  /// (bookAppointmentWithPayment, payment polling) can't be mocked yet.
   /// That's a separate, larger refactor tracked on its own branch.
   AppointmentProvider({FirestoreService? firestoreService})
       : _firestoreService = firestoreService ?? FirestoreService();
@@ -666,6 +664,87 @@ class AppointmentProvider with ChangeNotifier {
       _setError('Failed to cancel appointment: ${e.toString()}');
       _setLoading(false);
       return false;
+    }
+  }
+
+  /// Reschedule an appointment to a new date/time.
+  ///
+  /// Previously there was no reschedule feature anywhere in the app — a
+  /// patient's only option for a date/time that no longer worked was to
+  /// cancel and rebook from scratch, losing the original booking record.
+  /// This re-checks availability for the NEW slot before committing (the
+  /// appointment being rescheduled is naturally excluded from that check,
+  /// since checkDoctorAvailability only looks for conflicts at the new
+  /// date/time, not the appointment's current one).
+  Future<bool> rescheduleAppointment({
+    required String appointmentId,
+    required String doctorId,
+    required DateTime newDate,
+    required String newTime,
+  }) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final isAvailable = await _firestoreService.checkDoctorAvailability(
+        doctorId: doctorId,
+        date: newDate,
+        time: newTime,
+      );
+
+      if (!isAvailable) {
+        _setError('Doctor is not available at the selected time. Please choose another slot.');
+        _setLoading(false);
+        return false;
+      }
+
+      final normalizedDate = DateTime(newDate.year, newDate.month, newDate.day);
+
+      await _firestoreService.updateAppointment(appointmentId, {
+        'appointmentDate': normalizedDate,
+        'appointmentTime': newTime,
+        'updatedAt': DateTime.now(),
+      });
+
+      _updateLocalAppointmentSchedule(appointmentId, normalizedDate, newTime);
+
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _setError('Failed to reschedule appointment: ${e.toString()}');
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  /// Helper method to update appointment date/time in local state
+  void _updateLocalAppointmentSchedule(
+    String appointmentId,
+    DateTime newDate,
+    String newTime,
+  ) {
+    Appointment applySchedule(Appointment appointment) {
+      return appointment.copyWith(
+        appointmentDate: newDate,
+        appointmentTime: newTime,
+        updatedAt: DateTime.now(),
+      );
+    }
+
+    final appointmentIndex = _appointments.indexWhere((a) => a.id == appointmentId);
+    if (appointmentIndex != -1) {
+      _appointments[appointmentIndex] = applySchedule(_appointments[appointmentIndex]);
+    }
+
+    final patientIndex = _patientAppointments.indexWhere((a) => a.id == appointmentId);
+    if (patientIndex != -1) {
+      _patientAppointments[patientIndex] = applySchedule(_patientAppointments[patientIndex]);
+    }
+
+    final doctorIndex = _doctorAppointments.indexWhere((a) => a.id == appointmentId);
+    if (doctorIndex != -1) {
+      _doctorAppointments[doctorIndex] = applySchedule(_doctorAppointments[doctorIndex]);
     }
   }
 
