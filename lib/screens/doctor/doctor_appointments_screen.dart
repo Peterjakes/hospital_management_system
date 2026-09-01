@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:table_calendar/table_calendar.dart';
 import 'package:hospital_management_system/const/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:hospital_management_system/providers/appointment_provider.dart';
@@ -16,6 +17,8 @@ class DoctorAppointmentsScreen extends StatefulWidget {
 
 class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
   DateTime _selectedDate = DateTime.now();
+  DateTime _focusedCalendarDay = DateTime.now();
+  bool _showCalendarView = false;
 
   @override
   void initState() {
@@ -76,21 +79,70 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
   Widget _buildDateSelector() {
     return Container(
       padding: const EdgeInsets.all(16),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Text(
-              'Appointments for ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Appointments for ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              // No calendar view existed anywhere in the app before — a
+              // doctor could only jump to one date at a time via a picker
+              // dialog, with no visual sense of their schedule across days.
+              IconButton(
+                onPressed: () {
+                  setState(() => _showCalendarView = !_showCalendarView);
+                },
+                icon: Icon(_showCalendarView ? Icons.view_list : Icons.calendar_view_month),
+                tooltip: _showCalendarView ? 'List view' : 'Calendar view',
+              ),
+              IconButton(
+                onPressed: _selectDate,
+                icon: const Icon(Icons.calendar_today),
+                tooltip: 'Select Date',
+              ),
+            ],
+          ),
+          if (_showCalendarView) ...[
+            const SizedBox(height: 8),
+            TableCalendar(
+              firstDay: DateTime.now().subtract(const Duration(days: 365)),
+              lastDay: DateTime.now().add(const Duration(days: 365)),
+              focusedDay: _focusedCalendarDay,
+              calendarFormat: CalendarFormat.month,
+              selectedDayPredicate: (day) => isSameDay(day, _selectedDate),
+              onDaySelected: (selectedDay, focusedDay) {
+                setState(() {
+                  _selectedDate = selectedDay;
+                  _focusedCalendarDay = focusedDay;
+                });
+                _loadAppointments();
+              },
+              onPageChanged: (focusedDay) {
+                _focusedCalendarDay = focusedDay;
+              },
+              calendarStyle: CalendarStyle(
+                selectedDecoration: BoxDecoration(
+                  color: AppTheme.primaryColor,
+                  shape: BoxShape.circle,
+                ),
+                todayDecoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withOpacity(0.3),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              headerStyle: const HeaderStyle(
+                formatButtonVisible: false,
+                titleCentered: true,
               ),
             ),
-          ),
-          IconButton(
-            onPressed: _selectDate,
-            icon: const Icon(Icons.calendar_today),
-            tooltip: 'Select Date',
-          ),
+          ],
         ],
       ),
     );
