@@ -493,6 +493,39 @@ class FirestoreService {
     }
   }
 
+  /// Get the set of already-booked time slots for a doctor on a given date.
+  ///
+  /// Previously the booking screen showed every theoretical slot from a
+  /// doctor's working hours as clickable, with no way to know which were
+  /// already taken — a patient would only find out a slot was unavailable
+  /// after tapping submit (checkDoctorAvailability runs then, but too late
+  /// for a good picking experience). This lets the slot picker grey out or
+  /// hide already-booked times upfront.
+  Future<Set<String>> getBookedTimeSlots({
+    required String doctorId,
+    required DateTime date,
+  }) async {
+    try {
+      final normalizedDate = DateTime(date.year, date.month, date.day);
+
+      final querySnapshot = await _appointmentsCollection
+          .where('doctorId', isEqualTo: doctorId)
+          .where('appointmentDate', isEqualTo: Timestamp.fromDate(normalizedDate))
+          .where('status', whereIn: [
+            AppointmentStatus.scheduled.value,
+            AppointmentStatus.confirmed.value,
+            AppointmentStatus.inProgress.value,
+          ])
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => (doc.data() as Map<String, dynamic>)['appointmentTime'] as String)
+          .toSet();
+    } catch (e) {
+      throw Exception('Failed to load booked time slots: ${e.toString()}');
+    }
+  }
+
   /// Check doctor availability
   Future<bool> checkDoctorAvailability({
     required String doctorId,

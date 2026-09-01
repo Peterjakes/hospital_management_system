@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:table_calendar/table_calendar.dart';
 import 'package:hospital_management_system/const/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:hospital_management_system/providers/appointment_provider.dart';
@@ -16,6 +17,8 @@ class DoctorAppointmentsScreen extends StatefulWidget {
 
 class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
   DateTime _selectedDate = DateTime.now();
+  DateTime _focusedCalendarDay = DateTime.now();
+  bool _showCalendarView = false;
 
   @override
   void initState() {
@@ -76,21 +79,70 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
   Widget _buildDateSelector() {
     return Container(
       padding: const EdgeInsets.all(16),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Text(
-              'Appointments for ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Appointments for ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              // No calendar view existed anywhere in the app before — a
+              // doctor could only jump to one date at a time via a picker
+              // dialog, with no visual sense of their schedule across days.
+              IconButton(
+                onPressed: () {
+                  setState(() => _showCalendarView = !_showCalendarView);
+                },
+                icon: Icon(_showCalendarView ? Icons.view_list : Icons.calendar_view_month),
+                tooltip: _showCalendarView ? 'List view' : 'Calendar view',
+              ),
+              IconButton(
+                onPressed: _selectDate,
+                icon: const Icon(Icons.calendar_today),
+                tooltip: 'Select Date',
+              ),
+            ],
+          ),
+          if (_showCalendarView) ...[
+            const SizedBox(height: 8),
+            TableCalendar(
+              firstDay: DateTime.now().subtract(const Duration(days: 365)),
+              lastDay: DateTime.now().add(const Duration(days: 365)),
+              focusedDay: _focusedCalendarDay,
+              calendarFormat: CalendarFormat.month,
+              selectedDayPredicate: (day) => isSameDay(day, _selectedDate),
+              onDaySelected: (selectedDay, focusedDay) {
+                setState(() {
+                  _selectedDate = selectedDay;
+                  _focusedCalendarDay = focusedDay;
+                });
+                _loadAppointments();
+              },
+              onPageChanged: (focusedDay) {
+                _focusedCalendarDay = focusedDay;
+              },
+              calendarStyle: CalendarStyle(
+                selectedDecoration: BoxDecoration(
+                  color: AppTheme.primaryColor,
+                  shape: BoxShape.circle,
+                ),
+                todayDecoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withOpacity(0.3),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              headerStyle: const HeaderStyle(
+                formatButtonVisible: false,
+                titleCentered: true,
               ),
             ),
-          ),
-          IconButton(
-            onPressed: _selectDate,
-            icon: const Icon(Icons.calendar_today),
-            tooltip: 'Select Date',
-          ),
+          ],
         ],
       ),
     );
@@ -152,48 +204,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
                 ),
                 const Spacer(),
                 PopupMenuButton(
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'start',
-                      child: Row(
-                        children: [
-                          Icon(Icons.play_arrow, size: 16),
-                          SizedBox(width: 8),
-                          Text('Start Consultation'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'complete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.check_circle, size: 16),
-                          SizedBox(width: 8),
-                          Text('Mark Complete'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'vitals',
-                      child: Row(
-                        children: [
-                          Icon(Icons.monitor_heart_outlined, size: 16),
-                          SizedBox(width: 8),
-                          Text('Record Vitals'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'prescription',
-                      child: Row(
-                        children: [
-                          Icon(Icons.receipt, size: 16),
-                          SizedBox(width: 8),
-                          Text('Add Prescription'),
-                        ],
-                      ),
-                    ),
-                  ],
+                  itemBuilder: (context) => _buildMenuItemsForStatus(appointment.status),
                   onSelected: (value) {
                     _handleAppointmentAction(appointment, value.toString());
                   },
@@ -276,8 +287,134 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
     }
   }
 
+  // Menu options are now conditional on the appointment's actual status.
+  // Previously every option (Start, Complete, Vitals, Prescription) showed
+  // for every appointment regardless of state — a doctor could tap "Mark
+  // Complete" on something never started, or "Start" on something already
+  // cancelled. This also adds the missing Accept/Decline step for a newly
+  // booked appointment, which the roadmap calls "doctor acceptance/
+  // rejection" — implemented using the existing scheduled/confirmed/
+  // cancelled statuses rather than adding a new enum value.
+  List<PopupMenuEntry<String>> _buildMenuItemsForStatus(AppointmentStatus status) {
+    switch (status) {
+      case AppointmentStatus.scheduled:
+        return const [
+          PopupMenuItem(
+            value: 'accept',
+            child: Row(
+              children: [
+                Icon(Icons.check_circle_outline, size: 16, color: Colors.green),
+                SizedBox(width: 8),
+                Text('Accept'),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: 'decline',
+            child: Row(
+              children: [
+                Icon(Icons.cancel_outlined, size: 16, color: Colors.red),
+                SizedBox(width: 8),
+                Text('Decline'),
+              ],
+            ),
+          ),
+        ];
+      case AppointmentStatus.confirmed:
+        return const [
+          PopupMenuItem(
+            value: 'start',
+            child: Row(
+              children: [
+                Icon(Icons.play_arrow, size: 16),
+                SizedBox(width: 8),
+                Text('Start Consultation'),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: 'decline',
+            child: Row(
+              children: [
+                Icon(Icons.cancel_outlined, size: 16, color: Colors.red),
+                SizedBox(width: 8),
+                Text('Cancel'),
+              ],
+            ),
+          ),
+        ];
+      case AppointmentStatus.inProgress:
+        return const [
+          PopupMenuItem(
+            value: 'vitals',
+            child: Row(
+              children: [
+                Icon(Icons.monitor_heart_outlined, size: 16),
+                SizedBox(width: 8),
+                Text('Record Vitals'),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: 'prescription',
+            child: Row(
+              children: [
+                Icon(Icons.receipt, size: 16),
+                SizedBox(width: 8),
+                Text('Add Prescription'),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: 'complete',
+            child: Row(
+              children: [
+                Icon(Icons.check_circle, size: 16),
+                SizedBox(width: 8),
+                Text('Mark Complete'),
+              ],
+            ),
+          ),
+        ];
+      case AppointmentStatus.completed:
+        // A completed visit's vitals/prescription can still be reviewed or
+        // corrected — the dialogs already pre-fill existing values.
+        return const [
+          PopupMenuItem(
+            value: 'vitals',
+            child: Row(
+              children: [
+                Icon(Icons.monitor_heart_outlined, size: 16),
+                SizedBox(width: 8),
+                Text('View/Edit Vitals'),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: 'prescription',
+            child: Row(
+              children: [
+                Icon(Icons.receipt, size: 16),
+                SizedBox(width: 8),
+                Text('View/Edit Prescription'),
+              ],
+            ),
+          ),
+        ];
+      case AppointmentStatus.cancelled:
+      case AppointmentStatus.noShow:
+        return const [];
+    }
+  }
+
   void _handleAppointmentAction(Appointment appointment, String action) {
     switch (action) {
+      case 'accept':
+        _updateAppointmentStatus(appointment, AppointmentStatus.confirmed);
+        break;
+      case 'decline':
+        _showDeclineDialog(appointment);
+        break;
       case 'start':
         _updateAppointmentStatus(appointment, AppointmentStatus.inProgress);
         break;
@@ -310,6 +447,105 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
       );
       _refreshAppointments();
     }
+  }
+
+  void _showDeclineDialog(Appointment appointment) {
+    final reasonController = TextEditingController();
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(
+            appointment.status == AppointmentStatus.scheduled
+                ? 'Decline Appointment'
+                : 'Cancel Appointment',
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                appointment.status == AppointmentStatus.scheduled
+                    ? 'This will let the patient know you are unable to take this appointment.'
+                    : 'This will cancel a confirmed appointment. The patient will be notified.',
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: reasonController,
+                decoration: const InputDecoration(
+                  labelText: 'Reason',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSaving ? null : () => Navigator.of(context).pop(),
+              child: const Text('Back'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorColor),
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      final reason = reasonController.text.trim();
+                      if (reason.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please provide a reason'),
+                            backgroundColor: AppTheme.errorColor,
+                          ),
+                        );
+                        return;
+                      }
+
+                      setDialogState(() => isSaving = true);
+
+                      final appointmentProvider =
+                          Provider.of<AppointmentProvider>(context, listen: false);
+                      final success = await appointmentProvider.cancelAppointment(
+                        appointment.id,
+                        reason,
+                      );
+
+                      if (!context.mounted) return;
+
+                      if (success) {
+                        Navigator.of(context).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Appointment updated'),
+                            backgroundColor: AppTheme.successColor,
+                          ),
+                        );
+                        _refreshAppointments();
+                      } else {
+                        setDialogState(() => isSaving = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              appointmentProvider.errorMessage ?? 'Failed to update appointment',
+                            ),
+                            backgroundColor: AppTheme.errorColor,
+                          ),
+                        );
+                      }
+                    },
+              child: isSaving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Confirm'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showVitalsDialog(Appointment appointment) {

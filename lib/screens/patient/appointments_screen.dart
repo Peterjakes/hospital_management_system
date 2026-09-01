@@ -8,6 +8,7 @@ import 'package:hospital_management_system/providers/doctor_provider.dart';
 import 'package:hospital_management_system/models/appointment_model.dart';
 import 'package:hospital_management_system/screens/patient/book_appointment_screen.dart';
 import 'package:hospital_management_system/services/pdf_service.dart';
+import 'package:hospital_management_system/services/firestore_service.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 
 /// Patient appointments screen showing all appointments
@@ -260,6 +261,17 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                   itemBuilder: (context) => [
                     if (appointment.canBeCancelled)
                       const PopupMenuItem(
+                        value: 'reschedule',
+                        child: Row(
+                          children: [
+                            Icon(Icons.calendar_today, size: 16),
+                            SizedBox(width: 8),
+                            Text('Reschedule'),
+                          ],
+                        ),
+                      ),
+                    if (appointment.canBeCancelled)
+                      const PopupMenuItem(
                         value: 'cancel',
                         child: Row(
                           children: [
@@ -293,7 +305,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                       ),
                   ],
                   onSelected: (value) {
-                    if (value == 'cancel') {
+                    if (value == 'reschedule') {
+                      _showRescheduleDialog(appointment);
+                    } else if (value == 'cancel') {
                       _showCancelDialog(appointment);
                     } else if (value == 'details') {
                       _showAppointmentDetails(appointment);
@@ -571,6 +585,197 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             child: Text(value),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showRescheduleDialog(Appointment appointment) async {
+    // Load the doctor's info first, since the new time picker needs their
+    // working hours and availableDays to generate valid slots — same data
+    // the original booking screen uses.
+    final doctorProvider = Provider.of<DoctorProvider>(context, listen: false);
+    final doctor = await doctorProvider.getDoctor(appointment.doctorId);
+
+    if (!mounted) return;
+    if (doctor == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to load doctor details for rescheduling'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
+
+    DateTime? newDate;
+    String? newTime;
+    Set<String> bookedSlots = {};
+    bool isLoadingSlots = false;
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          Future<void> loadSlotsForDate(DateTime date) async {
+            setDialogState(() {
+              isLoadingSlots = true;
+              newTime = null;
+            });
+            try {
+              final firestoreService = FirestoreService();
+              final slots = await firestoreService.getBookedTimeSlots(
+                doctorId: appointment.doctorId,
+                date: date,
+              );
+              setDialogState(() {
+                bookedSlots = slots;
+                isLoadingSlots = false;
+              });
+            } catch (_) {
+              setDialogState(() => isLoadingSlots = false);
+            }
+          }
+
+          final dayOfWeek = newDate == null
+              ? null
+              : const [
+                  'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+                  'Friday', 'Saturday', 'Sunday',
+                ][newDate!.weekday - 1];
+          final doctorWorksThatDay = dayOfWeek == null || doctor.isAvailableOnDay(dayOfWeek);
+
+          return AlertDialog(
+            title: const Text('Reschedule Appointment'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Currently: ${appointment.formattedDateTime}'),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: isSaving
+                        ? null
+                        : () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: DateTime.now().add(const Duration(days: 1)),
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime.now().add(const Duration(days: 30)),
+                            );
+                            if (picked != null) {
+                              setDialogState(() => newDate = picked);
+                              await loadSlotsForDate(picked);
+                            }
+                          },
+                    icon: const Icon(Icons.calendar_today, size: 16),
+                    label: Text(
+                      newDate == null
+                          ? 'Pick a new date'
+                          : '${newDate!.day}/${newDate!.month}/${newDate!.year}',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (newDate != null && !doctorWorksThatDay)
+                    Text(
+                      'Doctor is not available on $dayOfWeek.',
+                      style: const TextStyle(color: AppTheme.errorColor),
+                    )
+                  else if (newDate != null && isLoadingSlots)
+                    const Center(child: CircularProgressIndicator())
+                  else if (newDate != null)
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: doctor.getAvailableTimeSlots().map((time) {
+                        final isBooked = bookedSlots.contains(time);
+                        final isSelected = newTime == time;
+                        return GestureDetector(
+                          onTap: isBooked
+                              ? null
+                              : () => setDialogState(() => newTime = time),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isBooked
+                                  ? Colors.grey.shade200
+                                  : (isSelected ? AppTheme.primaryColor : Colors.transparent),
+                              border: Border.all(
+                                color: isBooked ? Colors.grey.shade400 : AppTheme.primaryColor,
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Text(
+                              isBooked ? '$time (Booked)' : time,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isBooked
+                                    ? Colors.grey.shade500
+                                    : (isSelected ? Colors.white : AppTheme.primaryColor),
+                                decoration: isBooked ? TextDecoration.lineThrough : null,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isSaving ? null : () => Navigator.of(context).pop(),
+                child: const Text('Back'),
+              ),
+              ElevatedButton(
+                onPressed: (isSaving || newDate == null || newTime == null)
+                    ? null
+                    : () async {
+                        setDialogState(() => isSaving = true);
+
+                        final appointmentProvider =
+                            Provider.of<AppointmentProvider>(context, listen: false);
+                        final success = await appointmentProvider.rescheduleAppointment(
+                          appointmentId: appointment.id,
+                          doctorId: appointment.doctorId,
+                          newDate: newDate!,
+                          newTime: newTime!,
+                        );
+
+                        if (!context.mounted) return;
+
+                        if (success) {
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Appointment rescheduled successfully!'),
+                              backgroundColor: AppTheme.successColor,
+                            ),
+                          );
+                        } else {
+                          setDialogState(() => isSaving = false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                appointmentProvider.errorMessage ?? 'Failed to reschedule',
+                              ),
+                              backgroundColor: AppTheme.errorColor,
+                            ),
+                          );
+                        }
+                      },
+                child: isSaving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Confirm Reschedule'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
