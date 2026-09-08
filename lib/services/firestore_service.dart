@@ -28,6 +28,20 @@ class FirestoreService {
     }
   }
 
+    // Save/update a user's FCM device token so push notifications can be
+  // targeted at them. Called whenever a user signs in or their token
+  // refreshes (Firebase periodically rotates tokens).
+  Future<void> updateUserFcmToken(String userId, String fcmToken) async {
+    try {
+      await _usersCollection.doc(userId).update({
+        'fcmToken': fcmToken,
+        'updatedAt': Timestamp.fromDate(DateTime.now()),
+      });
+    } catch (e) {
+      throw Exception('Failed to save FCM token: ${e.toString()}');
+    }
+  }
+
   /// DEPARTMENT OPERATIONS ///
 
   // Get all departments from Firestore

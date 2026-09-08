@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hospital_management_system/models/user_model.dart' as app_user;
 import 'package:hospital_management_system/models/patient_model.dart';
 import 'package:hospital_management_system/services/auth_service.dart';
+import 'package:hospital_management_system/services/notification_service.dart';
 
 /// Authentication provider managing user authentication state
 class AuthProvider with ChangeNotifier {
@@ -71,6 +72,9 @@ class AuthProvider with ChangeNotifier {
       if (_currentFirebaseUser != null) {
         final userData = await _authService.getCurrentUserData();
         _currentUserData = userData;
+        if (_authService.currentUser != null) {
+          NotificationService.instance.saveTokenForUser(_authService.currentUser!.uid);
+        }
         _clearError();
       }
     } catch (e) {
@@ -94,6 +98,9 @@ class AuthProvider with ChangeNotifier {
 
       if (userData != null) {
         _currentUserData = userData;
+        if (_authService.currentUser != null) {
+          NotificationService.instance.saveTokenForUser(_authService.currentUser!.uid);
+        }
         _setLoading(false);
         return true;
       }
@@ -129,6 +136,9 @@ class AuthProvider with ChangeNotifier {
       if (userModel != null) {
         _currentFirebaseUser = _authService.currentUser;
         _currentUserData = userModel.toMap();
+        if (_authService.currentUser != null) {
+          NotificationService.instance.saveTokenForUser(_authService.currentUser!.uid);
+        }
         notifyListeners();
         _setLoading(false);
         return true;
@@ -179,6 +189,9 @@ class AuthProvider with ChangeNotifier {
         _currentFirebaseUser = _authService.currentUser;
         _currentUserData = patient.toMap();
         _currentUserData!['id'] = patient.id;
+        if (_authService.currentUser != null) {
+          NotificationService.instance.saveTokenForUser(_authService.currentUser!.uid);
+        }
         notifyListeners();
         _setLoading(false);
         return true;
