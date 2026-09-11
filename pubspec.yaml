@@ -52,6 +52,8 @@ dependencies:
   firebase_storage: ^13.0.2
   url_launcher: ^6.3.2
   table_calendar: ^3.2.1
+  firebase_messaging: ^16.6.0
+  flutter_local_notifications: ^20.1.0
 
 dev_dependencies:
   flutter_test:
@@ -64,14 +66,14 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
 
-# For information on the generic Dart part of this file, see the
-# following page: https://dart.dev/tools/pub/pubspec
-
- # Added for testing: fake_cloud_firestore lets us create realistic fake
+  # Added for testing: fake_cloud_firestore lets us create realistic fake
   # Firestore documents/snapshots in tests without touching a real Firebase
   # project. mocktail lets us mock services like AuthService for provider tests.
-  fake_cloud_firestore: ^4.1.0+1
+  fake_cloud_firestore: ^4.2.0
   mocktail: ^1.0.4
+
+dependency_overrides:
+  meta: ^1.17.0
 
 # The following section is specific to Flutter packages.
 flutter:
