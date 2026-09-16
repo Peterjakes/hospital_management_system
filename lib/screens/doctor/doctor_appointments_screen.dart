@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:hospital_management_system/providers/appointment_provider.dart';
 import 'package:hospital_management_system/providers/auth_provider.dart';
 import 'package:hospital_management_system/models/appointment_model.dart';
+import 'package:hospital_management_system/services/notification_api_service.dart';
 
 
 /// Doctor appointments screen showing all doctor appointments
@@ -446,6 +447,18 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
         ),
       );
       _refreshAppointments();
+
+      if (status == AppointmentStatus.confirmed || status == AppointmentStatus.cancelled) {
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final doctorName = authProvider.currentUserData?['firstName'] != null
+            ? '${authProvider.currentUserData?['firstName']} ${authProvider.currentUserData?['lastName']}'
+            : 'Your doctor';
+        NotificationApiService.notifyStatusChanged(
+          patientId: appointment.patientId,
+          status: status.value,
+          doctorName: doctorName,
+        );
+      }
     }
   }
 
@@ -779,6 +792,15 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
                         ),
                       );
                       _refreshAppointments();
+
+                      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                      final doctorName = authProvider.currentUserData?['firstName'] != null
+                          ? '${authProvider.currentUserData?['firstName']} ${authProvider.currentUserData?['lastName']}'
+                          : 'Your doctor';
+                      NotificationApiService.notifyPrescriptionReady(
+                        patientId: appointment.patientId,
+                        doctorName: doctorName,
+                      );
                     } else {
                       setDialogState(() => isSaving = false);
                       ScaffoldMessenger.of(context).showSnackBar(
