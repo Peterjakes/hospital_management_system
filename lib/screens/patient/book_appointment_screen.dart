@@ -10,6 +10,8 @@ import 'package:hospital_management_system/widgets/custom_text_field.dart';
 import 'package:hospital_management_system/widgets/custom_button.dart';
 import 'package:hospital_management_system/services/firestore_service.dart';
 import 'package:hospital_management_system/services/mpesa_service.dart';
+import 'package:hospital_management_system/services/notification_api_service.dart';
+
 
 class BookAppointmentScreen extends StatefulWidget {
   const BookAppointmentScreen({super.key});
@@ -233,6 +235,16 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
           content: Text(result['error'] ?? 'Failed to book appointment'),
           backgroundColor: AppTheme.errorColor,
         ),
+      );
+    } else {
+      final patientName = authProvider.currentUserData?['firstName'] != null
+          ? '${authProvider.currentUserData?['firstName']} ${authProvider.currentUserData?['lastName']}'
+          : 'A patient';
+      NotificationApiService.notifyBookingCreated(
+        doctorId: _selectedDoctorId!,
+        patientName: patientName,
+        appointmentDate: '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}',
+        appointmentTime: _selectedTime!,
       );
     }
   }
