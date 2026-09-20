@@ -3,14 +3,13 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:hospital_management_system/providers/patient_provider.dart';
 import 'package:hospital_management_system/providers/doctor_provider.dart';
 
 /// Comprehensive system reports service for generating and printing various reports
 class SystemReportsService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   /// Generate patient statistics report using provider data - FIXED TYPE CASTING
   Map<String, dynamic> generatePatientStatisticsFromProvider(PatientProvider patientProvider) {
@@ -304,22 +303,19 @@ class SystemReportsService {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileName = 'system_report_$timestamp.pdf';
 
-      final ref = _storage.ref().child('reports/system/$fileName');
-      
-      await ref.putData(
-        pdfData,
-        SettableMetadata(
-          contentType: 'application/pdf',
-          customMetadata: {
-            'reportType': 'system',
-            'generatedAt': DateTime.now().toIso8601String(),
-            'totalPatients': patientProvider.patients.length.toString(),
-            'totalDoctors': doctorProvider.doctors.length.toString(),
-          },
+      // Upload via Cloudinary (Firebase Storage requires the paid Blaze
+      // plan; this method had regressed back to Firebase Storage after
+      // being fixed once already — same fix reapplied here).
+      final cloudinary = CloudinaryPublic('dfmbsbqi8', 'flutter_preset');
+      final response = await cloudinary.uploadFile(
+        CloudinaryFile.fromBytesData(
+          pdfData,
+          identifier: fileName,
+          folder: 'hospital_management/reports/system',
+          resourceType: CloudinaryResourceType.Raw,
         ),
       );
-
-      final downloadUrl = await ref.getDownloadURL();
+      final downloadUrl = response.secureUrl;
 
       // Save report record to Firestore
       await _firestore.collection('system_reports').add({
