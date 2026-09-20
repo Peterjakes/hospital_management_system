@@ -7,12 +7,11 @@ import 'package:hospital_management_system/models/patient_model.dart';
 import 'package:hospital_management_system/models/doctor_model.dart';
 import 'package:hospital_management_system/models/appointment_model.dart';
 
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Enhanced PDF service for generating, printing, and saving prescriptions
 class PDFService {
-  final FirebaseStorage _storage = FirebaseStorage.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   /// Generate a comprehensive prescription PDF as a byte array
@@ -494,27 +493,20 @@ class PDFService {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileName = 'prescription_${appointment.id}_$timestamp.pdf';
 
-      // Define storage path: prescriptions/{patientId}/{fileName}
-      final ref = _storage.ref().child("prescriptions/${patient.id}/$fileName");
-
-      // Upload file with metadata
-      await ref.putData(
-        pdfData,
-        SettableMetadata(
-          contentType: "application/pdf",
-          customMetadata: {
-            'patientId': patient.id,
-            'doctorId': doctor.id,
-            'appointmentId': appointment.id,
-            'patientName': patient.fullName,
-            'doctorName': doctor.fullName,
-            'generatedAt': DateTime.now().toIso8601String(),
-          },
+      // Upload via Cloudinary (Firebase Storage requires the paid Blaze
+      // plan, which this project deliberately doesn't use — same fix
+      // already applied to printPrescription's PDF generation; this
+      // separate method had regressed back to Firebase Storage).
+      final cloudinary = CloudinaryPublic('dfmbsbqi8', 'flutter_preset');
+      final response = await cloudinary.uploadFile(
+        CloudinaryFile.fromBytesData(
+          pdfData,
+          identifier: fileName,
+          folder: 'hospital_management/prescriptions/${patient.id}',
+          resourceType: CloudinaryResourceType.Raw,
         ),
       );
-
-      // Get download URL
-      final downloadUrl = await ref.getDownloadURL();
+      final downloadUrl = response.secureUrl;
 
       // Update Firestore appointment document
       await _firestore.collection("appointments").doc(appointment.id).update({
@@ -588,16 +580,17 @@ class PDFService {
   }
 
   /// Delete prescription (admin function)
+  ///
+  /// Cloudinary's unsigned upload preset can't delete files client-side
+  /// without exposing an API secret, so this deletes the Firestore record
+  /// only; the file itself becomes an orphan on Cloudinary. True deletion
+  /// would need a small backend endpoint holding the Cloudinary API secret.
   Future<bool> deletePrescription(String prescriptionId, String fileUrl) async {
     try {
-      // Delete from Firestore
       await _firestore.collection("prescriptions").doc(prescriptionId).delete();
 
-      // Delete from Storage
-      final ref = FirebaseStorage.instance.refFromURL(fileUrl);
-      await ref.delete();
-
-      print("✅ Prescription deleted successfully.");
+      print("✅ Prescription record deleted from Firestore.");
+      print("⚠️ Note: file itself remains on Cloudinary (requires backend to fully delete).");
       return true;
     } catch (e) {
       print("❌ Error deleting prescription: $e");
