@@ -36,6 +36,21 @@ class AuthService {
 
         if (userDoc.exists) {
           final userData = userDoc.data() as Map<String, dynamic>;
+
+          // Enforce account deactivation. Previously an admin could
+          // deactivate a patient (isActive: false, deactivatedAt set) but
+          // nothing here ever checked it — a deactivated account could
+          // still sign in normally, making the deactivation feature a
+          // no-op. Firebase Auth has already signed them in by this point,
+          // so we sign them back out immediately rather than let a
+          // deactivated session persist.
+          if (userData['isActive'] == false) {
+            await _auth.signOut();
+            throw Exception(
+              'This account has been deactivated. Please contact an administrator.',
+            );
+          }
+
           userData['id'] = userDoc.id;
           return userData;
         }
