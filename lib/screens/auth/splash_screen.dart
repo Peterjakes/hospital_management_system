@@ -27,7 +27,12 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
     _setupAnimations();
-    _initializeApp();
+    // Deferred to after the first frame — calling _initializeApp()
+    // directly here caused "setState() or markNeedsBuild() called during
+    // build", since AuthProvider.initialize()'s first line fires
+    // notifyListeners() synchronously, before any await, which lands
+    // in the middle of this widget's very first build.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initializeApp());
   }
 
   // setup splash screen animations

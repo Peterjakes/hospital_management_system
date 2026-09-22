@@ -100,7 +100,8 @@ Future<void> _handleLogin() async {
             backgroundColor: Colors.blue,
             foregroundColor: Colors.white,
           ),
-          body: Padding(
+          body: SingleChildScrollView(
+            child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Form(
               key: _formKey,
@@ -239,6 +240,7 @@ Future<void> _handleLogin() async {
                 ],
               ),
             ),
+          ),
           ),
         );
       },
