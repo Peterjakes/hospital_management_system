@@ -1,0 +1,37 @@
+name: Flutter CI
+
+# Runs on every push and every pull request targeting main — catches
+# broken code (failing tests, analyzer errors) before it reaches main,
+# rather than discovering it only when someone happens to run it locally.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          # Pinned to a specific channel rather than an exact version so
+          # this doesn't need manual bumping every time Flutter releases —
+          # but if a future SDK bump breaks something here the way local
+          # upgrades did during this project, that's expected, not a sign
+          # this workflow is broken.
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run flutter analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Run flutter test
+        run: flutter test
